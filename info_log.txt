@@ -1,0 +1,383 @@
+Initialized native services in: C:\Users\user\.gradle\native
+Initialized jansi services in: C:\Users\user\.gradle\native
+The client will now receive all logging from the daemon (pid: 336). The daemon log file: C:\Users\user\.gradle\daemon\9.0-milestone-1\daemon-336.out.log
+Starting 57th build in daemon [uptime: 3 hrs 0 mins 21.473 secs, performance: 97%, GC rate: 0.00/s, heap usage: 0% of 2 GiB]
+Using 12 worker leases.
+Now considering [C:\dev\MyAAC] as hierarchies to watch
+Watching the file system is configured to be enabled if available
+File system watching is active
+Starting Build
+Settings evaluated using settings file 'C:\dev\MyAAC\settings.gradle.kts'.
+Projects loaded. Root project using build file 'C:\dev\MyAAC\build.gradle.kts'.
+Included projects: [root project 'Fluently', project ':app']
+
+> Configure project :
+Evaluating root project 'Fluently' using build file 'C:\dev\MyAAC\build.gradle.kts'.
+Resolved plugin [id: 'com.android.application', version: '8.13.2', apply: false]
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.20', apply: false]
+
+> Configure project :app
+Evaluating project ':app' using build file 'C:\dev\MyAAC\app\build.gradle.kts'.
+Resolved plugin [id: 'com.android.application']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Resolved plugin [id: 'com.google.devtools.ksp', version: '1.9.20-1.0.14']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle81 variant
+All projects evaluated.
+Task name matched 'testDebugUnitTest'
+Selected primary task 'testDebugUnitTest' from project :
+Tasks to be executed: [task ':app:checkKotlinGradlePluginConfigurationErrors', task ':app:preBuild', task ':app:preDebugBuild', task ':app:generateDebugBuildConfig', task ':app:checkDebugAarMetadata', task ':app:processDebugNavigationResources', task ':app:compileDebugNavigationResources', task ':app:generateDebugResValues', task ':app:mapDebugSourceSetPaths', task ':app:generateDebugResources', task ':app:mergeDebugResources', task ':app:packageDebugResources', task ':app:parseDebugLocalResources', task ':app:createDebugCompatibleScreenManifests', task ':app:extractDeepLinksDebug', task ':app:processDebugMainManifest', task ':app:processDebugManifest', task ':app:processDebugManifestForPackage', task ':app:processDebugResources', task ':app:kspDebugKotlin', task ':app:compileDebugKotlin', task ':app:javaPreCompileDebug', task ':app:compileDebugJavaWithJavac', task ':app:bundleDebugClassesToRuntimeJar', task ':app:bundleDebugClassesToCompileJar', task ':app:kspDebugUnitTestKotlin', task ':app:compileDebugUnitTestKotlin', task ':app:preDebugUnitTestBuild', task ':app:javaPreCompileDebugUnitTest', task ':app:compileDebugUnitTestJavaWithJavac', task ':app:processDebugJavaRes', task ':app:processDebugUnitTestJavaRes', task ':app:testDebugUnitTest']
+Tasks that were excluded: []
+Resolve mutations for :app:checkKotlinGradlePluginConfigurationErrors (Thread[#7455,Execution worker,5,main]) started.
+:app:checkKotlinGradlePluginConfigurationErrors (Thread[#7455,Execution worker,5,main]) started.
+
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':app:checkKotlinGradlePluginConfigurationErrors' because:
+  Build cache is disabled
+Task ':app:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :app:preBuild (Thread[#7455,Execution worker,5,main]) started.
+:app:preBuild (Thread[#7465,Execution worker Thread 11,5,main]) started.
+
+> Task :app:preBuild UP-TO-DATE
+Skipping task ':app:preBuild' as it has no actions.
+Resolve mutations for :app:preDebugBuild (Thread[#7465,Execution worker Thread 11,5,main]) started.
+:app:preDebugBuild (Thread[#7456,Execution worker Thread 2,5,main]) started.
+
+> Task :app:preDebugBuild UP-TO-DATE
+Skipping task ':app:preDebugBuild' as it has no actions.
+Resolve mutations for :app:generateDebugBuildConfig (Thread[#7455,Execution worker,5,main]) started.
+:app:generateDebugBuildConfig (Thread[#7454,included builds,5,main]) started.
+
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+Caching disabled for task ':app:generateDebugBuildConfig' because:
+  Build cache is disabled
+Skipping task ':app:generateDebugBuildConfig' as it is up-to-date.
+Resolve mutations for :app:checkDebugAarMetadata (Thread[#7454,included builds,5,main]) started.
+:app:checkDebugAarMetadata (Thread[#7454,included builds,5,main]) started.
+
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':app:checkDebugAarMetadata' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:checkDebugAarMetadata' as it is up-to-date.
+Resolve mutations for :app:processDebugNavigationResources (Thread[#7454,included builds,5,main]) started.
+:app:processDebugNavigationResources (Thread[#7460,Execution worker Thread 6,5,main]) started.
+
+> Task :app:processDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':app:processDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':app:processDebugNavigationResources' as it is up-to-date.
+Resolve mutations for :app:compileDebugNavigationResources (Thread[#7460,Execution worker Thread 6,5,main]) started.
+:app:compileDebugNavigationResources (Thread[#7460,Execution worker Thread 6,5,main]) started.
+
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+Caching disabled for task ':app:compileDebugNavigationResources' because:
+  Build cache is disabled
+Skipping task ':app:compileDebugNavigationResources' as it is up-to-date.
+Resolve mutations for :app:generateDebugResValues (Thread[#7460,Execution worker Thread 6,5,main]) started.
+:app:generateDebugResValues (Thread[#7460,Execution worker Thread 6,5,main]) started.
+
+> Task :app:generateDebugResValues UP-TO-DATE
+Caching disabled for task ':app:generateDebugResValues' because:
+  Build cache is disabled
+Skipping task ':app:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :app:mapDebugSourceSetPaths (Thread[#7460,Execution worker Thread 6,5,main]) started.
+:app:mapDebugSourceSetPaths (Thread[#7460,Execution worker Thread 6,5,main]) started.
+
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+Caching disabled for task ':app:mapDebugSourceSetPaths' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:mapDebugSourceSetPaths' as it is up-to-date.
+Resolve mutations for :app:generateDebugResources (Thread[#7460,Execution worker Thread 6,5,main]) started.
+:app:generateDebugResources (Thread[#7460,Execution worker Thread 6,5,main]) started.
+
+> Task :app:generateDebugResources UP-TO-DATE
+Caching disabled for task ':app:generateDebugResources' because:
+  Build cache is disabled
+Skipping task ':app:generateDebugResources' as it is up-to-date.
+Resolve mutations for :app:mergeDebugResources (Thread[#7460,Execution worker Thread 6,5,main]) started.
+:app:mergeDebugResources (Thread[#7460,Execution worker Thread 6,5,main]) started.
+
+> Task :app:mergeDebugResources UP-TO-DATE
+Caching disabled for task ':app:mergeDebugResources' because:
+  Build cache is disabled
+Skipping task ':app:mergeDebugResources' as it is up-to-date.
+Resolve mutations for :app:packageDebugResources (Thread[#7460,Execution worker Thread 6,5,main]) started.
+:app:packageDebugResources (Thread[#7460,Execution worker Thread 6,5,main]) started.
+
+> Task :app:packageDebugResources UP-TO-DATE
+Caching disabled for task ':app:packageDebugResources' because:
+  Build cache is disabled
+Skipping task ':app:packageDebugResources' as it is up-to-date.
+Resolve mutations for :app:parseDebugLocalResources (Thread[#7460,Execution worker Thread 6,5,main]) started.
+:app:parseDebugLocalResources (Thread[#7454,included builds,5,main]) started.
+
+> Task :app:parseDebugLocalResources UP-TO-DATE
+Caching disabled for task ':app:parseDebugLocalResources' because:
+  Build cache is disabled
+Skipping task ':app:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :app:createDebugCompatibleScreenManifests (Thread[#7454,included builds,5,main]) started.
+:app:createDebugCompatibleScreenManifests (Thread[#7454,included builds,5,main]) started.
+
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+Caching disabled for task ':app:createDebugCompatibleScreenManifests' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:createDebugCompatibleScreenManifests' as it is up-to-date.
+Resolve mutations for :app:extractDeepLinksDebug (Thread[#7454,included builds,5,main]) started.
+:app:extractDeepLinksDebug (Thread[#7454,included builds,5,main]) started.
+
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+Caching disabled for task ':app:extractDeepLinksDebug' because:
+  Build cache is disabled
+Skipping task ':app:extractDeepLinksDebug' as it is up-to-date.
+Resolve mutations for :app:processDebugMainManifest (Thread[#7454,included builds,5,main]) started.
+:app:processDebugMainManifest (Thread[#7454,included builds,5,main]) started.
+
+> Task :app:processDebugMainManifest UP-TO-DATE
+Caching disabled for task ':app:processDebugMainManifest' because:
+  Build cache is disabled
+Skipping task ':app:processDebugMainManifest' as it is up-to-date.
+Resolve mutations for :app:processDebugManifest (Thread[#7454,included builds,5,main]) started.
+:app:processDebugManifest (Thread[#7454,included builds,5,main]) started.
+
+> Task :app:processDebugManifest UP-TO-DATE
+Caching disabled for task ':app:processDebugManifest' because:
+  Build cache is disabled
+Skipping task ':app:processDebugManifest' as it is up-to-date.
+Resolve mutations for :app:processDebugManifestForPackage (Thread[#7454,included builds,5,main]) started.
+:app:processDebugManifestForPackage (Thread[#7454,included builds,5,main]) started.
+
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+Custom actions are attached to task ':app:processDebugManifestForPackage'.
+Caching disabled for task ':app:processDebugManifestForPackage' because:
+  Build cache is disabled
+Skipping task ':app:processDebugManifestForPackage' as it is up-to-date.
+Resolve mutations for :app:processDebugResources (Thread[#7454,included builds,5,main]) started.
+:app:processDebugResources (Thread[#7454,included builds,5,main]) started.
+
+> Task :app:processDebugResources UP-TO-DATE
+Caching disabled for task ':app:processDebugResources' because:
+  Build cache is disabled
+Skipping task ':app:processDebugResources' as it is up-to-date.
+Resolve mutations for :app:kspDebugKotlin (Thread[#7454,included builds,5,main]) started.
+:app:kspDebugKotlin (Thread[#7454,included builds,5,main]) started.
+
+> Task :app:kspDebugKotlin UP-TO-DATE
+file or directory 'C:\dev\MyAAC\app\src\debug\kotlin', not found
+file or directory 'C:\dev\MyAAC\app\src\debug\java', not found
+file or directory 'C:\dev\MyAAC\app\src\main\kotlin', not found
+file or directory 'C:\dev\MyAAC\app\src\debug\kotlin', not found
+file or directory 'C:\dev\MyAAC\app\src\debug\java', not found
+file or directory 'C:\dev\MyAAC\app\src\main\kotlin', not found
+Caching disabled for task ':app:kspDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':app:kspDebugKotlin' as it is up-to-date.
+Resolve mutations for :app:compileDebugKotlin (Thread[#7454,included builds,5,main]) started.
+:app:compileDebugKotlin (Thread[#7454,included builds,5,main]) started.
+
+> Task :app:compileDebugKotlin UP-TO-DATE
+Caching disabled for task ':app:compileDebugKotlin' because:
+  Build cache is disabled
+Skipping task ':app:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :app:javaPreCompileDebug (Thread[#7454,included builds,5,main]) started.
+:app:javaPreCompileDebug (Thread[#7454,included builds,5,main]) started.
+
+> Task :app:javaPreCompileDebug UP-TO-DATE
+Caching disabled for task ':app:javaPreCompileDebug' because:
+  Build cache is disabled
+Skipping task ':app:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :app:compileDebugJavaWithJavac (Thread[#7454,included builds,5,main]) started.
+:app:compileDebugJavaWithJavac (Thread[#7454,included builds,5,main]) started.
+
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debug\classes', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debug\classes', not found
+Custom actions are attached to task ':app:compileDebugJavaWithJavac'.
+Caching disabled for task ':app:compileDebugJavaWithJavac' because:
+  Build cache is disabled
+Skipping task ':app:compileDebugJavaWithJavac' as it is up-to-date.
+No compile result for :app:compileDebugJavaWithJavac
+No compile result for :app:compileDebugJavaWithJavac
+Resolve mutations for :app:bundleDebugClassesToRuntimeJar (Thread[#7454,included builds,5,main]) started.
+:app:bundleDebugClassesToRuntimeJar (Thread[#7461,Execution worker Thread 7,5,main]) started.
+
+> Task :app:bundleDebugClassesToRuntimeJar UP-TO-DATE
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debug\classes', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debug\classes', not found
+Caching disabled for task ':app:bundleDebugClassesToRuntimeJar' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:bundleDebugClassesToRuntimeJar' as it is up-to-date.
+work action resolve classes.jar (project :app) (Thread[#7461,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :app:bundleDebugClassesToCompileJar (Thread[#7461,Execution worker Thread 7,5,main]) started.
+:app:bundleDebugClassesToCompileJar (Thread[#7461,Execution worker Thread 7,5,main]) started.
+
+> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+Caching disabled for task ':app:bundleDebugClassesToCompileJar' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:bundleDebugClassesToCompileJar' as it is up-to-date.
+work action resolve classes.jar (project :app) (Thread[#7461,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :app:kspDebugUnitTestKotlin (Thread[#7461,Execution worker Thread 7,5,main]) started.
+:app:kspDebugUnitTestKotlin (Thread[#7461,Execution worker Thread 7,5,main]) started.
+
+> Task :app:kspDebugUnitTestKotlin UP-TO-DATE
+file or directory 'C:\dev\MyAAC\app\src\debugUnitTest\kotlin', not found
+file or directory 'C:\dev\MyAAC\app\src\test\kotlin', not found
+file or directory 'C:\dev\MyAAC\app\src\testDebug\kotlin', not found
+file or directory 'C:\dev\MyAAC\app\src\testDebug\java', not found
+file or directory 'C:\dev\MyAAC\app\src\debugUnitTest\kotlin', not found
+file or directory 'C:\dev\MyAAC\app\src\test\kotlin', not found
+file or directory 'C:\dev\MyAAC\app\src\testDebug\kotlin', not found
+file or directory 'C:\dev\MyAAC\app\src\testDebug\java', not found
+Caching disabled for task ':app:kspDebugUnitTestKotlin' because:
+  Build cache is disabled
+Skipping task ':app:kspDebugUnitTestKotlin' as it is up-to-date.
+Resolve mutations for :app:compileDebugUnitTestKotlin (Thread[#7461,Execution worker Thread 7,5,main]) started.
+:app:compileDebugUnitTestKotlin (Thread[#7461,Execution worker Thread 7,5,main]) started.
+
+> Task :app:compileDebugUnitTestKotlin UP-TO-DATE
+Caching disabled for task ':app:compileDebugUnitTestKotlin' because:
+  Build cache is disabled
+Skipping task ':app:compileDebugUnitTestKotlin' as it is up-to-date.
+Resolve mutations for :app:preDebugUnitTestBuild (Thread[#7461,Execution worker Thread 7,5,main]) started.
+:app:preDebugUnitTestBuild (Thread[#7461,Execution worker Thread 7,5,main]) started.
+
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+Skipping task ':app:preDebugUnitTestBuild' as it has no actions.
+Resolve mutations for :app:javaPreCompileDebugUnitTest (Thread[#7461,Execution worker Thread 7,5,main]) started.
+:app:javaPreCompileDebugUnitTest (Thread[#7461,Execution worker Thread 7,5,main]) started.
+
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+Caching disabled for task ':app:javaPreCompileDebugUnitTest' because:
+  Build cache is disabled
+Skipping task ':app:javaPreCompileDebugUnitTest' as it is up-to-date.
+Resolve mutations for :app:compileDebugUnitTestJavaWithJavac (Thread[#7461,Execution worker Thread 7,5,main]) started.
+:app:compileDebugUnitTestJavaWithJavac (Thread[#7461,Execution worker Thread 7,5,main]) started.
+
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+Skipping task ':app:compileDebugUnitTestJavaWithJavac' as it has no source files and no previous output files.
+Resolve mutations for :app:processDebugJavaRes (Thread[#7461,Execution worker Thread 7,5,main]) started.
+:app:processDebugJavaRes (Thread[#7461,Execution worker Thread 7,5,main]) started.
+
+> Task :app:processDebugJavaRes UP-TO-DATE
+file or directory 'C:\dev\MyAAC\app\src\main\resources', not found
+file or directory 'C:\dev\MyAAC\app\src\debug\resources', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debug\classes', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debug\classes', not found
+file or directory 'C:\dev\MyAAC\app\src\main\resources', not found
+file or directory 'C:\dev\MyAAC\app\src\debug\resources', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debug\classes', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debug\classes', not found
+Caching disabled for task ':app:processDebugJavaRes' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:processDebugJavaRes' as it is up-to-date.
+work action resolve out (project :app) (Thread[#7461,Execution worker Thread 7,5,main]) started.
+Resolve mutations for :app:processDebugUnitTestJavaRes (Thread[#7461,Execution worker Thread 7,5,main]) started.
+:app:processDebugUnitTestJavaRes (Thread[#7461,Execution worker Thread 7,5,main]) started.
+
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+file or directory 'C:\dev\MyAAC\app\src\test\resources', not found
+file or directory 'C:\dev\MyAAC\app\src\testDebug\resources', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debugUnitTest\classes', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debugUnitTest\classes', not found
+file or directory 'C:\dev\MyAAC\app\src\test\resources', not found
+file or directory 'C:\dev\MyAAC\app\src\testDebug\resources', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debugUnitTest\classes', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debugUnitTest\classes', not found
+Caching disabled for task ':app:processDebugUnitTestJavaRes' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Skipping task ':app:processDebugUnitTestJavaRes' as it is up-to-date.
+Resolve mutations for :app:testDebugUnitTest (Thread[#7461,Execution worker Thread 7,5,main]) started.
+:app:testDebugUnitTest (Thread[#7461,Execution worker Thread 7,5,main]) started.
+Gradle Test Executor 12 started executing tests.
+Gradle Test Executor 12 finished executing tests.
+
+> Task :app:testDebugUnitTest
+Caching disabled for task ':app:testDebugUnitTest' because:
+  Build cache is disabled
+Task ':app:testDebugUnitTest' is not up-to-date because:
+  Task has failed previously.
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debugUnitTest\classes', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debugUnitTest\classes', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debugUnitTest\classes', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debugUnitTest\classes', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debugUnitTest\classes', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debugUnitTest\classes', not found
+file or directory 'C:\dev\MyAAC\app\build\generated\ksp\debugUnitTest\resources', not found
+file or directory 'C:\dev\MyAAC\app\build\intermediates\javac\debugUnitTest\compileDebugUnitTestJavaWithJavac\classes', not found
+Starting process 'Gradle Test Executor 12'. Working directory: C:\dev\MyAAC\app Command: C:\Program Files\Android\Android Studio\jbr\bin\java.exe -Djava.awt.headless=true -Djava.library.path=C:\Program Files\Android\Android Studio\jbr\bin;C:\WINDOWS\Sun\Java\bin;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files (x86)\Pulse Secure\VC142.CRT\X64\;C:\Program Files (x86)\Pulse Secure\VC142.CRT\X86\;C:\Program Files (x86)\Common Files\Pulse Secure\TNC Client Plugin\;C:\Program Files\Git\cmd;C:\Program Files\Amazon\AWSCLIV2\;C:\Program Files\nodejs\;C:\Program Files\Calibre2\;C:\Program Files\cursor\resources\app\bin;C:\Users\user\AppData\Local\Microsoft\WindowsApps;;C:\Users\user\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\user\AppData\Roaming\npm;C:\Users\user\AppData\Local\Programs\Antigravity\bin;C:\Users\user\AppData\Local\Python\bin;.;C:\dev\MyAAC\app\src\testDebug\jniLibs;C:\dev\MyAAC\app\src\test\jniLibs -Dorg.gradle.internal.worker.tmpdir=C:\dev\MyAAC\app\build\tmp\testDebugUnitTest\work --add-opens=java.base/java.io=ALL-UNNAMED @C:\Users\user\.gradle\.tmp\gradle-worker-classpath12669664983061232718txt -Xmx512m -Dfile.encoding=UTF-8 -Duser.country=US -Duser.language=en -Duser.variant -ea worker.org.gradle.process.internal.worker.GradleWorkerMain 'Gradle Test Executor 12'
+Successfully started process 'Gradle Test Executor 12'
+
+BoardViewModelTest > lockCaregiverMode updates state to false STANDARD_ERROR
+    WARNING: A Java agent has been loaded dynamically (C:\Users\user\.gradle\caches\9.0-milestone-1\transforms\a2076184bf4827aad9eb4c27359c56ac\transformed\jetified-byte-buddy-agent-1.14.11.jar)
+    WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+    WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+    WARNING: Dynamic loading of agents will be disallowed by default in a future release
+
+BoardViewModelTest > createMagicBoard generates board using gemini service FAILED
+    Wanted but not invoked:
+    boardRepository.saveBoard(
+        <Capturing argument: Board>
+    );
+    -> at com.example.myaac.data.repository.BoardRepository.saveBoard(BoardRepository.kt:16)
+    Actually, there were zero interactions with this mock.
+        at app//com.example.myaac.data.repository.BoardRepository.saveBoard(BoardRepository.kt:16)
+        at app//com.example.myaac.viewmodel.BoardViewModelTest$createMagicBoard generates board using gemini service$1.invokeSuspend(BoardViewModelTest.kt:54)
+        at app//com.example.myaac.viewmodel.BoardViewModelTest$createMagicBoard generates board using gemini service$1.invoke(BoardViewModelTest.kt)
+        at app//com.example.myaac.viewmodel.BoardViewModelTest$createMagicBoard generates board using gemini service$1.invoke(BoardViewModelTest.kt)
+        at app//kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt$runTest$2$1$1.invokeSuspend(TestBuilders.kt:314)
+        at app//kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+        at app//kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+        at app//kotlinx.coroutines.test.TestDispatcher.processEvent$kotlinx_coroutines_test(TestDispatcher.kt:28)
+        at app//kotlinx.coroutines.test.TestCoroutineScheduler.tryRunNextTaskUnless$kotlinx_coroutines_test(TestCoroutineScheduler.kt:103)
+        at app//kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt$runTest$2$1$workRunner$1.invokeSuspend(TestBuilders.kt:320)
+        at app//kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+        at app//kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+        at app//kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:280)
+        at app//kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:85)
+        at app//kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:59)
+        at app//kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source)
+        at app//kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:38)
+        at app//kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source)
+        at app//kotlinx.coroutines.test.TestBuildersJvmKt.createTestResult(TestBuildersJvm.kt:13)
+        at app//kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:308)
+        at app//kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(Unknown Source)
+        at app//kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:166)
+        at app//kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(Unknown Source)
+        at app//kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0$default(TestBuilders.kt:158)
+        at app//kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0$default(Unknown Source)
+        at app//com.example.myaac.viewmodel.BoardViewModelTest.createMagicBoard generates board using gemini service(BoardViewModelTest.kt:39)
+
+8 tests completed, 1 failed
+Finished generating test XML results (0.002 secs) into: C:\dev\MyAAC\app\build\test-results\testDebugUnitTest
+Generating HTML test report...
+Finished generating test html results (0.005 secs) into: C:\dev\MyAAC\app\build\reports\tests\testDebugUnitTest
+
+> Task :app:testDebugUnitTest FAILED
+
+[Incubating] Problems report is available at: file:///C:/dev/MyAAC/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:testDebugUnitTest'.
+> There were failing tests. See the report at: file:///C:/dev/MyAAC/app/build/reports/tests/testDebugUnitTest/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.0-milestone-1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 3s
+29 actionable tasks: 2 executed, 27 up-to-date
+Watched directory hierarchies: [C:\dev\MyAAC]
