@@ -4,10 +4,12 @@ import android.app.Application
 import com.example.myaac.data.local.AppDatabase
 import com.example.myaac.data.remote.GeminiService
 import com.example.myaac.data.repository.BoardRepository
+import com.example.myaac.data.repository.SettingsRepository
 
 class MyAacApplication : Application() {
     val database by lazy { AppDatabase.getDatabase(this) }
     val repository by lazy { BoardRepository(database.boardDao()) }
+    val settingsRepository by lazy { SettingsRepository(this) }
     
     // TODO: Move API Key to local.properties or secrets gradle plugin for security
     // For prototype, we unfortunately need a key. 

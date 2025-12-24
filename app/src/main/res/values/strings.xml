@@ -1,3 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Fluently</string>
+    <string name="app_name">MyAAC</string>
+    
+    <!-- Main Screen -->
+    <string name="menu">Menu</string>
+    <string name="toggle_edit_mode">Toggle Edit Mode</string>
+    
+    <!-- Sentence Bar -->
+    <string name="speak">Speak</string>
+    <string name="clear">Clear</string>
+    <string name="backspace">Backspace</string>
+    
+    <!-- Sidebar -->
+    <string name="boards">Boards</string>
+    <string name="new_board">New Board</string>
+    <string name="delete">Delete</string>
+    <string name="enter_admin_mode">Enter Admin Mode</string>
+    <string name="exit_admin_mode">Exit Admin Mode</string>
+    <string name="settings">Settings</string>
+    
+    <!-- Create Board Dialog -->
+    <string name="create_new_board">Create New Board</string>
+    <string name="board_name">Board Name</string>
+    <string name="topic_optional">Topic (Optional - Magic!)</string>
+    <string name="topic_hint">e.g. Zoo, Beach, Kitchen</string>
+    <string name="magic_board_will_be_generated">✨ Magic Board will be generated using AI</string>
+    <string name="magic_create">✨ Magic Create</string>
+    <string name="create">Create</string>
+    <string name="cancel">Cancel</string>
+    
+    <!-- Delete Board Dialog -->
+    <string name="delete_board_title">Delete Board?</string>
+    <string name="delete_board_message">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
+    
+    <!-- PIN Dialog -->
+    <string name="enter_admin_pin">Enter Admin PIN</string>
+    <string name="pin">PIN</string>
+    <string name="incorrect_pin">Incorrect PIN</string>
+    <string name="unlock">Unlock</string>
+    
+    <!-- Settings Screen -->
+    <string name="language">Language</string>
+    <string name="english">English</string>
+    <string name="hebrew">Hebrew</string>
+    <string name="text_size">Text Size</string>
+    <string name="tts_speed">Speech Speed</string>
+    <string name="small">Small</string>
+    <string name="normal">Normal</string>
+    <string name="large">Large</string>
+    <string name="slow">Slow</string>
+    <string name="fast">Fast</string>
 </resources>

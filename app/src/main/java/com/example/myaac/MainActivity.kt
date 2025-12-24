@@ -1,5 +1,7 @@
 package com.example.myaac
 
+import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.util.Log
@@ -33,30 +35,82 @@ import com.example.myaac.ui.components.CommunicationGrid
 import com.example.myaac.ui.components.SentenceBar
 import com.example.myaac.ui.theme.MyAACTheme
 import com.example.myaac.viewmodel.BoardViewModel
+import com.example.myaac.ui.SettingsScreen
+import com.example.myaac.data.repository.AppSettings
 import java.util.Locale
 
 class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
     private var tts: TextToSpeech? = null
+    private lateinit var settingsRepository: com.example.myaac.data.repository.SettingsRepository
+
+    override fun attachBaseContext(newBase: Context) {
+        val app = newBase.applicationContext as MyAacApplication
+        val languageCode = app.settingsRepository.settings.value.languageCode
+        val locale = when (languageCode) {
+            "iw" -> Locale("iw")
+            else -> Locale("en")
+        }
+        val config = Configuration(newBase.resources.configuration)
+        config.setLocale(locale)
+        super.attachBaseContext(newBase.createConfigurationContext(config))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        val app = application as MyAacApplication
+        settingsRepository = app.settingsRepository
         
         // Initialize TTS
         tts = TextToSpeech(this, this)
 
         setContent {
             MyAACTheme {
-                MainScreen(
-                    onSpeak = { text -> speak(text) }
-                )
+                val settings by settingsRepository.settings.collectAsState()
+                var showSettings by remember { mutableStateOf(false) }
+                
+                if (showSettings) {
+                    SettingsScreen(
+                        settings = settings,
+                        onLanguageChange = { code ->
+                            settingsRepository.setLanguage(code)
+                            // Update TTS language
+                            val locale = when (code) {
+                                "iw" -> Locale("iw", "IL")
+                                else -> Locale.US
+                            }
+                            tts?.language = locale
+                            // Recreate activity to apply new language
+                            recreate()
+                        },
+                        onTextScaleChange = { scale ->
+                            settingsRepository.setTextScale(scale)
+                        },
+                        onTtsRateChange = { rate ->
+                            settingsRepository.setTtsRate(rate)
+                        },
+                        onBack = { showSettings = false }
+                    )
+                } else {
+                    MainScreen(
+                        onSpeak = { text -> speak(text, settings.ttsRate) },
+                        onOpenSettings = { showSettings = true },
+                        textScale = settings.textScale
+                    )
+                }
             }
         }
     }
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            val result = tts?.setLanguage(Locale.US)
+            val languageCode = settingsRepository.settings.value.languageCode
+            val locale = when (languageCode) {
+                "iw" -> Locale("iw", "IL")
+                else -> Locale.US
+            }
+            val result = tts?.setLanguage(locale)
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 Log.e("TTS", "The Language specified is not supported!")
             }
@@ -65,7 +119,8 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun speak(text: String) {
+    private fun speak(text: String, rate: Float = 1.0f) {
+        tts?.setSpeechRate(rate)
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "")
     }
 
@@ -82,7 +137,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 @Composable
 fun MainScreen(
     viewModel: BoardViewModel = viewModel(factory = BoardViewModel.Factory),
-    onSpeak: (String) -> Unit
+    onSpeak: (String) -> Unit,
+    onOpenSettings: () -> Unit,
+    textScale: Float
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val allBoards by viewModel.allBoards.collectAsState(initial = emptyList())
@@ -148,7 +205,11 @@ fun MainScreen(
                     viewModel.deleteBoard(board.id)
                 },
                 onUnlock = { pin -> viewModel.unlockCaregiverMode(pin) },
-                onLock = { viewModel.lockCaregiverMode() }
+                onLock = { viewModel.lockCaregiverMode() },
+                onOpenSettings = { 
+                    scope.launch { drawerState.close() }
+                    onOpenSettings()
+                }
             )
         }
     ) {

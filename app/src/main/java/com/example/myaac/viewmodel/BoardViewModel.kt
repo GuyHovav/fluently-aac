@@ -17,16 +17,19 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.example.myaac.data.remote.ArasaacService
 import com.example.myaac.data.remote.GeminiService
+import com.example.myaac.data.repository.SettingsRepository
 
 data class BoardUiState(
     val currentBoard: Board? = null,
     val sentence: List<String> = emptyList(),
     val recommendedButtons: List<AacButton> = emptyList(),
-    val isCaregiverMode: Boolean = false
+    val isCaregiverMode: Boolean = false,
+    val textScale: Float = 1.0f
 )
 
 class BoardViewModel(
     private val repository: BoardRepository,
+    private val settingsRepository: SettingsRepository,
     private val geminiService: GeminiService? = null,
     private val arasaacService: ArasaacService = ArasaacService()
 ) : ViewModel() {
@@ -35,6 +38,13 @@ class BoardViewModel(
     val uiState: StateFlow<BoardUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            // Observe settings changes
+            settingsRepository.settings.collect { settings ->
+                _uiState.update { it.copy(textScale = settings.textScale) }
+            }
+        }
+        
         viewModelScope.launch {
             // Check availability of Default Boards
             val homeId = "home"
@@ -313,7 +323,7 @@ class BoardViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MyAacApplication)
-                BoardViewModel(application.repository, application.geminiService)
+                BoardViewModel(application.repository, application.settingsRepository, application.geminiService)
             }
         }
     }

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MyAAC</string>
+    
+    <!-- Main Screen -->
+    <string name="menu">תפריט</string>
+    <string name="toggle_edit_mode">החלף מצב עריכה</string>
+    
+    <!-- Sentence Bar -->
+    <string name="speak">דבר</string>
+    <string name="clear">נקה</string>
+    <string name="backspace">מחק</string>
+    
+    <!-- Sidebar -->
+    <string name="boards">לוחות</string>
+    <string name="new_board">לוח חדש</string>
+    <string name="delete">מחק</string>
+    <string name="enter_admin_mode">כניסה למצב מנהל</string>
+    <string name="exit_admin_mode">יציאה ממצב מנהל</string>
+    <string name="settings">הגדרות</string>
+    
+    <!-- Create Board Dialog -->
+    <string name="create_new_board">צור לוח חדש</string>
+    <string name="board_name">שם הלוח</string>
+    <string name="topic_optional">נושא (אופציונלי - קסם!)</string>
+    <string name="topic_hint">למשל: גן חיות, חוף, מטבח</string>
+    <string name="magic_board_will_be_generated">✨ לוח קסם ייווצר באמצעות בינה מלאכותית</string>
+    <string name="magic_create">✨ יצירה קסומה</string>
+    <string name="create">צור</string>
+    <string name="cancel">ביטול</string>
+    
+    <!-- Delete Board Dialog -->
+    <string name="delete_board_title">למחוק לוח?</string>
+    <string name="delete_board_message">האם אתה בטוח שברצונך למחוק את \'%1$s\'? לא ניתן לבטל פעולה זו.</string>
+    
+    <!-- PIN Dialog -->
+    <string name="enter_admin_pin">הזן קוד מנהל</string>
+    <string name="pin">קוד</string>
+    <string name="incorrect_pin">קוד שגוי</string>
+    <string name="unlock">פתח</string>
+    
+    <!-- Settings Screen -->
+    <string name="language">שפה</string>
+    <string name="english">אנגלית</string>
+    <string name="hebrew">עברית</string>
+    <string name="text_size">גודל טקסט</string>
+    <string name="tts_speed">מהירות דיבור</string>
+    <string name="small">קטן</string>
+    <string name="normal">רגיל</string>
+    <string name="large">גדול</string>
+    <string name="slow">איטי</string>
+    <string name="fast">מהיר</string>
+</resources>
