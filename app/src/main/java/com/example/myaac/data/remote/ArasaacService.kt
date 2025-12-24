@@ -18,14 +18,15 @@ data class ArasaacKeyword(
 
 open class ArasaacService {
     private val gson = Gson()
-    private val BASE_URL = "https://api.arasaac.org/v1/pictograms/en/search/"
+    private val BASE_URL_TEMPLATE = "https://api.arasaac.org/v1/pictograms/%s/search/"
 
-    open suspend fun searchPictograms(query: String): List<ArasaacPictogram> {
+    open suspend fun searchPictograms(query: String, locale: String = "en"): List<ArasaacPictogram> {
         return withContext(Dispatchers.IO) {
             try {
                 // Encode spaces for URL
                 val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
-                val url = URL(BASE_URL + encodedQuery)
+                val urlString = String.format(BASE_URL_TEMPLATE, locale) + encodedQuery
+                val url = URL(urlString)
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 5000

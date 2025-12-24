@@ -92,3 +92,6 @@ lint/tmp/
 
 # Android cache
 .navigation/
+
+# Private Documentation
+private_docs/

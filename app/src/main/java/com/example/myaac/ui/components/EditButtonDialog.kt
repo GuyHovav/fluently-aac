@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -39,11 +40,13 @@ import java.io.FileOutputStream
 @Composable
 fun EditButtonDialog(
     button: AacButton,
+    defaultLanguage: String = "en",
     onDismiss: () -> Unit,
     onSave: (AacButton) -> Unit,
 
     onIdentifyItem: suspend (Bitmap) -> Pair<String, FloatArray?>,
-    onCheckSymbol: suspend (String) -> String?
+    onCheckSymbol: suspend (String) -> String?,
+    onDelete: () -> Unit
 ) {
     var label by remember { mutableStateOf(button.label) }
     var speechText by remember { mutableStateOf(button.speechText ?: "") }
@@ -57,6 +60,10 @@ fun EditButtonDialog(
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    
+    // New state for auto-name dialog
+    var showAutoNameDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
     
     // Helper to crop
     fun cropBitmap(source: Bitmap, box: FloatArray): Bitmap {
@@ -77,7 +84,7 @@ fun EditButtonDialog(
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
             imageUri = uri
-            // Auto-analyze? Maybe let user click button.
+            showAutoNameDialog = true
         }
     }
 
@@ -89,6 +96,7 @@ fun EditButtonDialog(
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             }
             imageUri = Uri.fromFile(file)
+            showAutoNameDialog = true
         }
     }
 
@@ -111,6 +119,67 @@ fun EditButtonDialog(
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+
+    // Helper for analysis
+    fun performAutoAnalysis() {
+        val uri = imageUri
+        if (uri == null) {
+            errorMessage = "Error: No image selected"
+            return
+        }
+        
+        try {
+            val bitmap = uriToBitmap(uri)
+            if (bitmap == null) {
+                errorMessage = "Error: Failed to load image"
+                return
+            }
+            
+            isAnalyzing = true
+            errorMessage = null
+            scope.launch {
+                try {
+                    val (name, coords) = onIdentifyItem(bitmap)
+                    
+                    // Check if result is an error
+                    if (name.startsWith("Error:") || name.startsWith("Err:")) {
+                        errorMessage = name
+                        isAnalyzing = false
+                        return@launch
+                    }
+                    
+                    label = name
+                    
+                    if (coords != null) {
+                        var processedBitmap = cropBitmap(bitmap, coords)
+                        
+                        // Save processed image
+                        val file = File(context.cacheDir, "processed_${System.currentTimeMillis()}.png")
+                        FileOutputStream(file).use { out ->
+                            processedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                        }
+                        imageUri = Uri.fromFile(file)
+                    }
+                    
+                    isAnalyzing = false
+                    
+                    // Check for symbol replacement
+                    val symbolUrl = onCheckSymbol(name)
+                    if (symbolUrl != null) {
+                        proposedSymbolUrl = symbolUrl
+                        showSymbolProposalDialog = true
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    errorMessage = "Error: ${e.message ?: "Unknown error"}"
+                    isAnalyzing = false
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            errorMessage = "Error: ${e.message ?: "Failed to process image"}"
         }
     }
 
@@ -185,79 +254,17 @@ fun EditButtonDialog(
                     Text("Search Symbol Library")
                 }
 
-                // AI Magic Button
-                if (imageUri != null) {
+                // AI Progress (Hidden unless analyzing)
+                if (isAnalyzing) {
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
-                        onClick = {
-                            val uri = imageUri
-                            if (uri == null) {
-                                errorMessage = "Error: No image selected"
-                                return@OutlinedButton
-                            }
-                            
-                            try {
-                                val bitmap = uriToBitmap(uri)
-                                if (bitmap == null) {
-                                    errorMessage = "Error: Failed to load image"
-                                    return@OutlinedButton
-                                }
-                                
-                                isAnalyzing = true
-                                errorMessage = null
-                                scope.launch {
-                                    try {
-                                        val (name, coords) = onIdentifyItem(bitmap)
-                                        
-                                        // Check if result is an error
-                                        if (name.startsWith("Error:") || name.startsWith("Err:")) {
-                                            errorMessage = name
-                                            isAnalyzing = false
-                                            return@launch
-                                        }
-                                        
-                                        label = name
-                                        
-                                        if (coords != null) {
-                                            var processedBitmap = cropBitmap(bitmap, coords)
-                                            
-                                            // Save processed image
-                                            val file = File(context.cacheDir, "processed_${System.currentTimeMillis()}.png")
-                                            FileOutputStream(file).use { out ->
-                                                processedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-                                            }
-                                            imageUri = Uri.fromFile(file)
-                                        }
-                                        
-                                        isAnalyzing = false
-                                        
-                                        // Check for symbol replacement
-                                        val symbolUrl = onCheckSymbol(name)
-                                        if (symbolUrl != null) {
-                                            proposedSymbolUrl = symbolUrl
-                                            showSymbolProposalDialog = true
-                                        }
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                        errorMessage = "Error: ${e.message ?: "Unknown error"}"
-                                        isAnalyzing = false
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                errorMessage = "Error: ${e.message ?: "Failed to process image"}"
-                            }
-                        },
-                        enabled = !isAnalyzing && imageUri != null
+                        onClick = { },
+                        enabled = false // Disabled, used only for indicator
                     ) {
                         if (isAnalyzing) {
                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Analyzing...")
-                        } else {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Auto-name with AI")
                         }
                     }
                     
@@ -309,30 +316,42 @@ fun EditButtonDialog(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.SpaceBetween // Changed to SpaceBetween to put Delete on left
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                    // Delete Button
+                    TextButton(
+                        onClick = { showDeleteConfirmation = true },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Delete")
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = {
-                        // Persist image to internal storage if new one selected
-                        // For prototype we just use the URI string, but in real app copy to app storage
-                        onSave(
-                            button.copy(
-                                label = label,
-                                speechText = speechText.ifBlank { null },
-                                backgroundColor = selectedColor,
-                                iconPath = imageUri?.toString(),
-                                action = if (button.action is ButtonAction.Speak) {
-                                     ButtonAction.Speak(speechText.ifBlank { label })
-                                } else {
-                                    button.action
-                                }
-                            )
-                        )
-                    }) {
-                        Text("Save")
+
+                    Row {
+                         TextButton(onClick = onDismiss) {
+                             Text("Cancel")
+                         }
+                         Spacer(modifier = Modifier.width(8.dp))
+                         Button(onClick = {
+                             // Persist image to internal storage if new one selected
+                             // For prototype we just use the URI string, but in real app copy to app storage
+                             onSave(
+                                 button.copy(
+                                     label = label,
+                                     speechText = speechText.ifBlank { null },
+                                     backgroundColor = selectedColor,
+                                     iconPath = imageUri?.toString(),
+                                     action = if (button.action is ButtonAction.Speak) {
+                                          ButtonAction.Speak(speechText.ifBlank { label })
+                                     } else {
+                                         button.action
+                                     }
+                                 )
+                             )
+                         }) {
+                             Text("Save")
+                         }
                     }
                 }
             }
@@ -341,6 +360,8 @@ fun EditButtonDialog(
     
     if (showSymbolSearch) {
         SymbolSearchDialog(
+            initialQuery = label,
+            defaultLanguage = defaultLanguage,
             onDismiss = { showSymbolSearch = false },
             onSymbolSelected = { url, symbolLabel ->
                 imageUri = Uri.parse(url)
@@ -364,6 +385,13 @@ fun EditButtonDialog(
                         modifier = Modifier.size(100.dp),
                         contentScale = ContentScale.Fit
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(onClick = {
+                        showSymbolProposalDialog = false
+                        showSymbolSearch = true
+                    }) {
+                        Text("Search for other symbols", style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             },
             confirmButton = {
@@ -377,6 +405,52 @@ fun EditButtonDialog(
             dismissButton = {
                 TextButton(onClick = { showSymbolProposalDialog = false }) {
                     Text("Keep Photo")
+                }
+            }
+        )
+    }
+
+    if (showAutoNameDialog) {
+        AlertDialog(
+            onDismissRequest = { showAutoNameDialog = false },
+            title = { Text("Auto-Name Image?") },
+            text = { Text("Do you want to use AI to automatically name this button based on the image?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showAutoNameDialog = false
+                    performAutoAnalysis()
+                }) {
+                    Text("Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAutoNameDialog = false }) {
+                    Text("No")
+                }
+            }
+        )
+    }
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text("Delete Button") },
+            text = { Text("Are you sure you want to delete this button? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmation = false
+                        onDelete()
+                        onDismiss() // Close the edit dialog as well
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text("Cancel")
                 }
             }
         )

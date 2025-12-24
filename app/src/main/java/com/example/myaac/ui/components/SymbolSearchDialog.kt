@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,13 +27,33 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SymbolSearchDialog(
+    initialQuery: String = "",
+    defaultLanguage: String = "en",
     onDismiss: () -> Unit,
     onSymbolSelected: (url: String, label: String) -> Unit
 ) {
-    var searchQuery by remember { mutableStateOf(TextFieldValue("")) }
+    var searchQuery by remember { mutableStateOf(TextFieldValue(initialQuery)) }
     var results by remember { mutableStateOf<List<ArasaacPictogram>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    
+    // Language Support
+    val languages = mapOf(
+        "en" to "English",
+        "es" to "Spanish",
+        "he" to "Hebrew",
+        "de" to "German",
+        "fr" to "French",
+        "it" to "Italian",
+        "pt" to "Portuguese"
+    )
+    
+    // Normalize default language to supported list or fallback to english
+    // Handle legacy Hebrew code "iw" -> "he"
+    val inputLanguage = if (defaultLanguage == "iw") "he" else defaultLanguage
+    val normalizedDefault = if (languages.containsKey(inputLanguage)) inputLanguage else "en"
+    var selectedLanguage by remember { mutableStateOf(normalizedDefault) }
+    var showLanguageMenu by remember { mutableStateOf(false) }
     
     val scope = rememberCoroutineScope()
     val arasaacService = remember { ArasaacService() }
@@ -43,7 +64,7 @@ fun SymbolSearchDialog(
         errorMessage = null
         scope.launch {
             try {
-                val list = arasaacService.searchPictograms(searchQuery.text)
+                val list = arasaacService.searchPictograms(searchQuery.text, selectedLanguage)
                 if (list.isEmpty()) {
                     errorMessage = "No symbols found."
                 }
@@ -53,6 +74,12 @@ fun SymbolSearchDialog(
             } finally {
                 isLoading = false
             }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (initialQuery.isNotBlank()) {
+            performSearch()
         }
     }
 
@@ -72,6 +99,34 @@ fun SymbolSearchDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Search Symbols", style = MaterialTheme.typography.titleLarge)
+                    
+                    // Language Selector
+                    Box {
+                        TextButton(onClick = { showLanguageMenu = true }) {
+                            Icon(Icons.Default.Translate, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(languages[selectedLanguage] ?: selectedLanguage)
+                        }
+                        DropdownMenu(
+                            expanded = showLanguageMenu,
+                            onDismissRequest = { showLanguageMenu = false }
+                        ) {
+                            languages.forEach { (code, name) ->
+                                DropdownMenuItem(
+                                    text = { Text(name) },
+                                    onClick = {
+                                        selectedLanguage = code
+                                        showLanguageMenu = false
+                                        // Optional: Re-trigger search if query exists
+                                        if (searchQuery.text.isNotBlank()) {
+                                            performSearch()
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = "Close")
                     }

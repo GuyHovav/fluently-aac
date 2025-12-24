@@ -96,7 +96,8 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                     MainScreen(
                         onSpeak = { text -> speak(text, settings.ttsRate) },
                         onOpenSettings = { showSettings = true },
-                        textScale = settings.textScale
+                        textScale = settings.textScale,
+                        languageCode = settings.languageCode
                     )
                 }
             }
@@ -139,7 +140,8 @@ fun MainScreen(
     viewModel: BoardViewModel = viewModel(factory = BoardViewModel.Factory),
     onSpeak: (String) -> Unit,
     onOpenSettings: () -> Unit,
-    textScale: Float
+    textScale: Float,
+    languageCode: String = "en"
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val allBoards by viewModel.allBoards.collectAsState(initial = emptyList())
@@ -159,6 +161,7 @@ fun MainScreen(
         // ... (Edit Dialog Code remains same)
          com.example.myaac.ui.components.EditButtonDialog(
             button = buttonToEdit!!,
+            defaultLanguage = languageCode,
             onDismiss = { buttonToEdit = null },
             onSave = { updatedButton ->
                 viewModel.updateButton(updatedButton)
@@ -178,6 +181,10 @@ fun MainScreen(
             },
             onCheckSymbol = { query ->
                 viewModel.checkSymbol(query)
+            },
+            onDelete = {
+                viewModel.deleteButton(buttonToEdit!!.id)
+                buttonToEdit = null
             }
         )
     }
@@ -256,16 +263,7 @@ fun MainScreen(
                     onSpeak = { text -> onSpeak(text) }
                 )
 
-                // Smart Strip (AI Predictions)
-                com.example.myaac.ui.components.SmartStrip(
-                    predictions = uiState.recommendedButtons,
-                    onButtonClick = { button ->
-                        viewModel.onButtonPress(button)
-                        if (button.action is ButtonAction.Speak) {
-                            onSpeak(button.textToSpeak)
-                        }
-                    }
-                )
+                // Smart Strip (AI Predictions) - REMOVED
 
                 // Grid
                 if (uiState.currentBoard != null) {

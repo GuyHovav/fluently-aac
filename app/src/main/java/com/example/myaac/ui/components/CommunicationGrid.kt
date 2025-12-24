@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -101,13 +102,22 @@ fun AacButtonView(
                      modifier = Modifier.fillMaxSize()
                  )
              } else {
-                // Placeholder Text for Icon (Centered because no image)
-                 Text(
-                     text = button.label.firstOrNull()?.toString() ?: "",
-                     fontSize = 48.sp,
-                     fontWeight = FontWeight.Bold,
-                     color = Color.Black.copy(alpha = 0.1f)
-                 )
+                // Placeholder Text or Add Icon
+                 if (button.label.isEmpty()) {
+                     Text(
+                         text = "+",
+                         fontSize = 48.sp,
+                         color = Color.Gray.copy(alpha = 0.5f),
+                         textAlign = TextAlign.Center
+                     )
+                 } else {
+                     Text(
+                         text = button.label.firstOrNull()?.toString() ?: "",
+                         fontSize = 48.sp,
+                         fontWeight = FontWeight.Bold,
+                         color = Color.Black.copy(alpha = 0.1f)
+                     )
+                 }
              }
         }
 

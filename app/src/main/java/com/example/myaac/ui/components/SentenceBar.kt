@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,16 +31,34 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.lazy.items
 
 @Composable
 fun SentenceBar(
-    sentence: List<String>,
+    sentence: List<com.example.myaac.model.AacButton>,
     onClear: () -> Unit,
     onBackspace: () -> Unit,
     onSpeak: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val displayedText = sentence.joinToString(" ")
+    val displayedText = sentence.joinToString(" ") { it.textToSpeak }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    // Auto-scroll to the end when sentence changes
+    androidx.compose.runtime.LaunchedEffect(sentence.size) {
+        if (sentence.isNotEmpty()) {
+            listState.animateScrollToItem(sentence.size - 1)
+        }
+    }
+
+    // Dynamic Sizing: Shrink items if there are many.
+    // If > 6 items, scale down from 60.dp to 40.dp based on count, capping at 40.dp min.
+    val itemSize = if (sentence.size > 6) {
+        maxOf(40.dp, 60.dp - ((sentence.size - 6) * 4).dp)
+    } else {
+        60.dp
+    }
 
     Surface(
         modifier = modifier
@@ -58,17 +77,16 @@ fun SentenceBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp)
-                .height(60.dp),
+                .height(80.dp), 
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Text Area
+            // Items Area
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    .clickable { onSpeak(displayedText) }
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = 8.dp)
                     .animateContentSize(),
                 contentAlignment = Alignment.CenterStart
             ) {
@@ -76,14 +94,23 @@ fun SentenceBar(
                     Text(
                         text = "Build your sentence...",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(start = 8.dp)
                     )
                 } else {
-                    Text(
-                        text = displayedText,
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    androidx.compose.foundation.lazy.LazyRow(
+                        state = listState,
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        items(sentence.size) { index ->
+                            SentenceBarItem(
+                                button = sentence[index], 
+                                size = itemSize
+                            )
+                        }
+                    }
                 }
             }
 
@@ -121,6 +148,64 @@ fun SentenceBar(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun SentenceBarItem(
+    button: com.example.myaac.model.AacButton,
+    size: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier
+) {
+    val baseColor = if (button.backgroundColor != 0xFFFFFFFF) Color(button.backgroundColor) else MaterialTheme.colorScheme.primaryContainer
+
+    // Adjust font size based on item size
+    // 60dp -> 10sp, 40dp -> 8sp
+    val fontSize = if (size < 50.dp) 8.sp else 10.sp
+
+    Box(
+        modifier = modifier
+            .size(size) 
+            .clip(RoundedCornerShape(8.dp))
+            .background(baseColor)
+            .border(1.dp, Color.Black.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        // Background Image
+        if (!button.iconPath.isNullOrEmpty()) {
+            coil.compose.AsyncImage(
+                model = button.iconPath,
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        // Text Overlay
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Text(
+                text = button.label,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = fontSize,
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        color = Color.Black,
+                        offset = androidx.compose.ui.geometry.Offset(1f, 1f),
+                        blurRadius = 2f
+                    )
+                ),
+                color = Color.White,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.padding(2.dp)
+            )
         }
     }
 }

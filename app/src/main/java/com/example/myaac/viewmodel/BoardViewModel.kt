@@ -21,8 +21,8 @@ import com.example.myaac.data.repository.SettingsRepository
 
 data class BoardUiState(
     val currentBoard: Board? = null,
-    val sentence: List<String> = emptyList(),
-    val recommendedButtons: List<AacButton> = emptyList(),
+    val sentence: List<AacButton> = emptyList(),
+    // Predictions removed
     val isCaregiverMode: Boolean = false,
     val textScale: Float = 1.0f
 )
@@ -265,9 +265,8 @@ class BoardViewModel(
     fun onButtonPress(button: AacButton) {
         when (val action = button.action) {
             is ButtonAction.Speak -> {
-                addToSentence(action.text)
-                // Trigger prediction
-                updatePredictions()
+                addToSentence(button)
+                // Predictions removed
             }
             is ButtonAction.LinkToBoard -> {
                 navigateToBoard(action.boardId)
@@ -283,28 +282,18 @@ class BoardViewModel(
         }
     }
 
-    private fun addToSentence(text: String) {
+    private fun addToSentence(button: AacButton) {
         _uiState.update {
-            it.copy(sentence = it.sentence + text)
+            it.copy(sentence = it.sentence + button)
         }
     }
 
-    private fun updatePredictions() {
-        if (geminiService == null) return
-        viewModelScope.launch {
-            val currentSentence = _uiState.value.sentence.joinToString(" ")
-            val allLabels = repository.getAllButtonLabels()
-            val predictedLabels = geminiService.predictNextButtons(currentSentence, allLabels)
-            val predictedButtons = predictedLabels.mapNotNull { label ->
-                repository.findButtonByLabel(label) 
-            }
-            _uiState.update { it.copy(recommendedButtons = predictedButtons) }
-        }
-    }
+    // Predictions removed
+    // private fun updatePredictions() { ... }
 
     fun clearSentence() {
         _uiState.update {
-            it.copy(sentence = emptyList(), recommendedButtons = emptyList())
+            it.copy(sentence = emptyList())
         }
     }
 
@@ -316,6 +305,17 @@ class BoardViewModel(
             repository.saveBoard(updatedBoard)
             // No strict need to update UI state manually if using Flow from Room, but currentBoard in state might be static
             _uiState.update { it.copy(currentBoard = updatedBoard) } 
+        }
+    }
+
+    fun deleteButton(buttonId: String) {
+        val current = _uiState.value.currentBoard ?: return
+        // Filter out the button with the given ID
+        val updatedList = current.buttons.filterNot { it.id == buttonId }
+        val updatedBoard = current.copy(buttons = updatedList)
+        viewModelScope.launch {
+            repository.saveBoard(updatedBoard)
+            _uiState.update { it.copy(currentBoard = updatedBoard) }
         }
     }
 

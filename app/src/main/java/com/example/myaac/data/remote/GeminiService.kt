@@ -148,32 +148,7 @@ class GeminiService(private val apiKey: String) {
         return bitmap
     }
 
-    suspend fun predictNextButtons(currentSentence: String, availableButtons: List<String>): List<String> {
-        return withContext(Dispatchers.IO) {
-            // Optimization: Limit available buttons to ~100 distinct labels to avoid token limits if database grows huge
-            val distinctCandidates = availableButtons.distinct().take(200).joinToString(", ")
-            
-            val prompt = """
-                Context: User is building a sentence on an AAC device.
-                Current Sentence: "$currentSentence"
-                Available Buttons: [$distinctCandidates]
-                
-                Task: Select the 3 most likely next buttons from the Available Buttons list that complete the sentence grammatically or contextually.
-                Return ONLY a comma-separated list of the 3 button labels. Do not invent new buttons. If unsure, return nothing.
-            """.trimIndent()
-            
-            try {
-                val response = textModel.generateContent(prompt)
-                val text = response.text?.trim() ?: return@withContext emptyList()
-                
-                // Parse "Juice, Please, Now" -> ["Juice", "Please", "Now"]
-                text.split(",").map { it.trim() }.filter { it.isNotBlank() }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                emptyList()
-            }
-        }
-    }
+    // predictNextButtons removed
     suspend fun generateBoard(topic: String): List<String> {
         return withContext(Dispatchers.IO) {
             val prompt = """

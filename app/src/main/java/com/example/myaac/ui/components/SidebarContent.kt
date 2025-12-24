@@ -178,14 +178,16 @@ fun SidebarContent(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Settings button
-            OutlinedButton(
-                onClick = onOpenSettings,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Settings, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.settings))
+            if (isCaregiverMode) {
+                // Settings button
+                OutlinedButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.settings))
+                }
             }
             
             if (isCaregiverMode) {
