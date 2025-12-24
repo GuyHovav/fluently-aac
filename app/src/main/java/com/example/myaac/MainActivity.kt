@@ -118,6 +118,9 @@ fun MainScreen(
                         "Error: ${e.localizedMessage}" to null
                     }
                 }
+            },
+            onCheckSymbol = { query ->
+                viewModel.checkSymbol(query)
             }
         )
     }

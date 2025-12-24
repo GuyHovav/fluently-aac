@@ -41,7 +41,9 @@ fun EditButtonDialog(
     button: AacButton,
     onDismiss: () -> Unit,
     onSave: (AacButton) -> Unit,
-    onIdentifyItem: suspend (Bitmap) -> Pair<String, FloatArray?>
+
+    onIdentifyItem: suspend (Bitmap) -> Pair<String, FloatArray?>,
+    onCheckSymbol: suspend (String) -> String?
 ) {
     var label by remember { mutableStateOf(button.label) }
     var speechText by remember { mutableStateOf(button.speechText ?: "") }
@@ -50,6 +52,8 @@ fun EditButtonDialog(
     var isAnalyzing by remember { mutableStateOf(false) }
     var showSymbolSearch by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var proposedSymbolUrl by remember { mutableStateOf<String?>(null) }
+    var showSymbolProposalDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -217,14 +221,6 @@ fun EditButtonDialog(
                                         if (coords != null) {
                                             var processedBitmap = cropBitmap(bitmap, coords)
                                             
-                                            // Apply Background Removal (Shopping Site Look)
-                                            // DISABLED TEMPORARILY due to dependency issue
-                                            // try {
-                                            //      processedBitmap = com.example.myaac.util.ImageHelper.removeBackground(processedBitmap)
-                                            // } catch (e: Exception) {
-                                            //     e.printStackTrace()
-                                            // }
-
                                             // Save processed image
                                             val file = File(context.cacheDir, "processed_${System.currentTimeMillis()}.png")
                                             FileOutputStream(file).use { out ->
@@ -234,6 +230,13 @@ fun EditButtonDialog(
                                         }
                                         
                                         isAnalyzing = false
+                                        
+                                        // Check for symbol replacement
+                                        val symbolUrl = onCheckSymbol(name)
+                                        if (symbolUrl != null) {
+                                            proposedSymbolUrl = symbolUrl
+                                            showSymbolProposalDialog = true
+                                        }
                                     } catch (e: Exception) {
                                         e.printStackTrace()
                                         errorMessage = "Error: ${e.message ?: "Unknown error"}"
@@ -343,6 +346,38 @@ fun EditButtonDialog(
                 imageUri = Uri.parse(url)
                 label = symbolLabel.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }
                 showSymbolSearch = false
+            }
+        )
+    }
+
+    if (showSymbolProposalDialog && proposedSymbolUrl != null) {
+        AlertDialog(
+            onDismissRequest = { showSymbolProposalDialog = false },
+            title = { Text("Symbol Found") },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("We found a standard symbol for '$label'. Would you like to use it instead of your photo?")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    AsyncImage(
+                        model = proposedSymbolUrl,
+                        contentDescription = "Proposed Symbol",
+                        modifier = Modifier.size(100.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    imageUri = Uri.parse(proposedSymbolUrl)
+                    showSymbolProposalDialog = false
+                }) {
+                    Text("Use Symbol")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSymbolProposalDialog = false }) {
+                    Text("Keep Photo")
+                }
             }
         )
     }

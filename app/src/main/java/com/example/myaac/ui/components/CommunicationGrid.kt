@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -34,7 +36,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myaac.model.AacButton
 import coil.compose.AsyncImage
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.geometry.Offset
+
 import androidx.compose.ui.layout.ContentScale
+
 
 @Composable
 fun CommunicationGrid(
@@ -79,53 +85,57 @@ fun AacButtonView(
             .scale(scale)
             .clip(RoundedCornerShape(16.dp))
             .background(baseColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .padding(8.dp),
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxSize()
+        // 1. Background Layer (Image or Placeholder)
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
-            // Icon
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.3f)),
-                contentAlignment = Alignment.Center
-            ) {
-                 if (button.iconPath != null) {
-                     AsyncImage(
-                         model = button.iconPath,
-                         contentDescription = null,
-                         contentScale = ContentScale.Crop,
-                         modifier = Modifier.fillMaxSize()
-                     )
-                 } else {
-                    // Placeholder Text for Icon
-                     Text(
-                         text = button.label.firstOrNull()?.toString() ?: "",
-                         fontSize = 40.sp,
-                         fontWeight = FontWeight.Bold,
-                         color = Color.Black.copy(alpha = 0.2f)
-                     )
-                 }
-            }
-            
+             if (!button.iconPath.isNullOrEmpty()) {
+                 AsyncImage(
+                     model = button.iconPath,
+                     contentDescription = null,
+                     contentScale = ContentScale.Crop,
+                     modifier = Modifier.fillMaxSize()
+                 )
+             } else {
+                // Placeholder Text for Icon (Centered because no image)
+                 Text(
+                     text = button.label.firstOrNull()?.toString() ?: "",
+                     fontSize = 48.sp,
+                     fontWeight = FontWeight.Bold,
+                     color = Color.Black.copy(alpha = 0.1f)
+                 )
+             }
+        }
+
+        // 2. Text Overlay Layer
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.BottomCenter
+        ) {
             Text(
                 text = button.label,
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
+                    fontSize = 14.sp,
+                    shadow = Shadow(
+                        color = Color.Black,
+                        offset = Offset(3f, 3f),
+                        blurRadius = 3f
+                    )
                 ),
-                color = if (baseColor.luminance() > 0.5f) Color.Black else Color.White,
+                color = Color.White,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 4.dp)
+                modifier = Modifier
+                    .padding(8.dp)
+                    .padding(bottom = 4.dp)
             )
         }
     }

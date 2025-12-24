@@ -213,6 +213,20 @@ class BoardViewModel(
         }
     }
 
+    suspend fun checkSymbol(query: String): String? {
+        return try {
+            val searchResults = arasaacService.searchPictograms(query)
+            if (searchResults.isNotEmpty()) {
+                arasaacService.getImageUrl(searchResults[0]._id)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     fun unlockCaregiverMode(pin: String): Boolean {
         // Debug mode: auto-unlock without PIN check (for development/testing)
         if (com.example.myaac.BuildConfig.DEBUG_MODE) {
