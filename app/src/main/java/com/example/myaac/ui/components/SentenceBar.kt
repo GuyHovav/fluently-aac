@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backspace
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,6 +25,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,6 +49,14 @@ fun SentenceBar(
 ) {
     val displayedText = sentence.joinToString(" ") { it.textToSpeak }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    var isExpanded by remember { mutableStateOf(false) }
+
+    if (isExpanded) {
+        ExpandedMessageDialog(
+            text = displayedText,
+            onDismiss = { isExpanded = false }
+        )
+    }
 
     // Auto-scroll to the end when sentence changes
     androidx.compose.runtime.LaunchedEffect(sentence.size) {
@@ -127,6 +140,17 @@ fun SentenceBar(
                     Icon(
                         imageVector = Icons.Default.Backspace,
                         contentDescription = "Backspace",
+                        tint = if (sentence.isNotEmpty()) MaterialTheme.colorScheme.onSurface else Color.LightGray
+                    )
+                }
+
+                IconButton(
+                    onClick = { isExpanded = true },
+                    enabled = sentence.isNotEmpty()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Fullscreen,
+                        contentDescription = "Expand",
                         tint = if (sentence.isNotEmpty()) MaterialTheme.colorScheme.onSurface else Color.LightGray
                     )
                 }

@@ -1,6 +1,9 @@
 package com.example.myaac.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -11,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.myaac.R
 import com.example.myaac.data.repository.AppSettings
+import com.example.myaac.data.model.DisabilityType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -19,6 +23,8 @@ fun SettingsScreen(
     onLanguageChange: (String) -> Unit,
     onTextScaleChange: (Float) -> Unit,
     onTtsRateChange: (Float) -> Unit,
+    onLocationSuggestionsChange: (Boolean) -> Unit,
+    onDisabilityTypeChange: (DisabilityType) -> Unit,
     onBack: () -> Unit
 ) {
     Scaffold(
@@ -37,9 +43,20 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // User Profile
+            SettingSection(title = stringResource(R.string.user_profile)) {
+                DisabilitySelector(
+                    selected = settings.disabilityType,
+                    onSelect = onDisabilityTypeChange
+                )
+            }
+            
+            Divider()
+
             // Language Selection
             SettingSection(title = stringResource(R.string.language)) {
                 LanguageSelector(
@@ -74,6 +91,29 @@ fun SettingsScreen(
                     startLabel = stringResource(R.string.slow),
                     endLabel = stringResource(R.string.fast)
                 )
+            }
+
+
+            Divider()
+
+            // Location Suggestions
+            SettingSection(title = stringResource(R.string.location_suggestions)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.enable_location_suggestions),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f).padding(end = 16.dp)
+                    )
+                    Switch(
+                        checked = settings.locationSuggestionsEnabled,
+                        onCheckedChange = onLocationSuggestionsChange
+                    )
+                }
             }
         }
     }
@@ -151,6 +191,42 @@ fun SliderWithLabels(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+fun DisabilitySelector(
+    selected: DisabilityType,
+    onSelect: (DisabilityType) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val options = listOf(
+            DisabilityType.NONE to R.string.disability_none,
+            DisabilityType.MOTOR_IMPAIRMENT to R.string.disability_motor,
+            DisabilityType.VISUAL_IMPAIRMENT to R.string.disability_visual,
+            DisabilityType.COGNITIVE_IMPAIRMENT to R.string.disability_cognitive,
+            DisabilityType.APHASIA to R.string.disability_aphasia
+        )
+
+        options.forEach { (type, stringRes) ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelect(type) }
+                    .padding(vertical = 4.dp)
+            ) {
+                RadioButton(
+                    selected = (selected == type),
+                    onClick = { onSelect(type) }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(stringRes),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
         }
     }
 }

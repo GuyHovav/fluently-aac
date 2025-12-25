@@ -23,6 +23,7 @@ class BoardViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var repository: BoardRepository
+    private lateinit var settingsRepository: com.example.myaac.data.repository.SettingsRepository
     private lateinit var geminiService: GeminiService
     private lateinit var arasaacService: ArasaacService
     private lateinit var viewModel: BoardViewModel
@@ -32,9 +33,16 @@ class BoardViewModelTest {
         repository = mock()
         geminiService = mock()
         arasaacService = mock()
+        settingsRepository = mock()
+        
+        // Mock settings flow
+        val settingsFlow = kotlinx.coroutines.flow.MutableStateFlow(
+            com.example.myaac.data.repository.AppSettings(textScale = 1.0f)
+        )
+        whenever(settingsRepository.settings).thenReturn(settingsFlow)
+        
         // Initialize ViewModel with mocks
-        // Note: In real app, might need to mock initial interactions in init block
-        viewModel = BoardViewModel(repository, geminiService, arasaacService)
+        viewModel = BoardViewModel(repository, settingsRepository, geminiService, arasaacService)
         // Clear invocations from init block
         clearInvocations(repository)
     }
@@ -118,38 +126,7 @@ class BoardViewModelTest {
         verify(repository, atLeastOnce()).getBoard(homeId) 
     }
 
-    @Test
-    fun `button press triggers smart strip prediction`() = runTest {
-        // Arrange
-        val button = AacButton(
-            id = "btn1", 
-            label = "I want", 
-            speechText = null,
-            action = ButtonAction.Speak("I want"), 
-            backgroundColor = 0
-        )
-        val allLabels = listOf("I want", "Food", "Play")
-        val predictedLabels = listOf("Food", "Play")
-        
-        whenever(repository.getAllButtonLabels()).thenReturn(allLabels)
-        whenever(geminiService.predictNextButtons(any(), eq(allLabels))).thenReturn(predictedLabels)
-        
-        // Find mocked buttons for the predicted labels
-        whenever(repository.findButtonByLabel("Food")).thenReturn(AacButton("food", "Food", null, action = ButtonAction.Speak("Food"), backgroundColor = 0))
-        whenever(repository.findButtonByLabel("Play")).thenReturn(AacButton("play", "Play", null, action = ButtonAction.Speak("Play"), backgroundColor = 0))
-
-        // Act
-        viewModel.onButtonPress(button)
-        advanceUntilIdle()
-        // Wait for coroutines (advance until idle would be better with TestDispatcher, but logic runs in scope)
-        // Advance not strictly needed with UnconfinedTestDispatcher/MainDispatcherRule if setup correctly, 
-        // but verifying interaction should work.
-
-        // Assert
-        verify(geminiService).predictNextButtons(any(), eq(allLabels))
-        verify(repository).findButtonByLabel("Food")
-        verify(repository).findButtonByLabel("Play")
-    }
+    // Prediction feature has been removed
 
     @Test
     fun `unlockCaregiverMode with correct PIN updates state to true`() = runTest {
@@ -182,5 +159,4 @@ class BoardViewModelTest {
 
         // Assert
         assertFalse(viewModel.uiState.value.isCaregiverMode)
-    }
-}
+    }}

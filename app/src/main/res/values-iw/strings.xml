@@ -1,44 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">MyAAC</string>
-    
+
     <!-- Main Screen -->
     <string name="menu">תפריט</string>
-    <string name="toggle_edit_mode">החלף מצב עריכה</string>
-    
+    <string name="toggle_edit_mode">מצב עריכה</string>
+
     <!-- Sentence Bar -->
     <string name="speak">דבר</string>
     <string name="clear">נקה</string>
     <string name="backspace">מחק</string>
-    
+
     <!-- Sidebar -->
     <string name="boards">לוחות</string>
     <string name="new_board">לוח חדש</string>
     <string name="delete">מחק</string>
-    <string name="enter_admin_mode">כניסה למצב מנהל</string>
-    <string name="exit_admin_mode">יציאה ממצב מנהל</string>
+    <string name="enter_admin_mode">מצב מנהל</string>
+    <string name="exit_admin_mode">יציאה ממנהל</string>
     <string name="settings">הגדרות</string>
-    
+
     <!-- Create Board Dialog -->
     <string name="create_new_board">צור לוח חדש</string>
     <string name="board_name">שם הלוח</string>
     <string name="topic_optional">נושא (אופציונלי - קסם!)</string>
     <string name="topic_hint">למשל: גן חיות, חוף, מטבח</string>
-    <string name="magic_board_will_be_generated">✨ לוח קסם ייווצר באמצעות בינה מלאכותית</string>
-    <string name="magic_create">✨ יצירה קסומה</string>
+    <string name="magic_board_will_be_generated">✨ לוח קסם ייווצר באמצעות AI</string>
+    <string name="magic_create">✨ צור קסם</string>
     <string name="create">צור</string>
     <string name="cancel">ביטול</string>
-    
+
     <!-- Delete Board Dialog -->
-    <string name="delete_board_title">למחוק לוח?</string>
+    <string name="delete_board_title">מחק לוח?</string>
     <string name="delete_board_message">האם אתה בטוח שברצונך למחוק את \'%1$s\'? לא ניתן לבטל פעולה זו.</string>
-    
+
     <!-- PIN Dialog -->
-    <string name="enter_admin_pin">הזן קוד מנהל</string>
+    <string name="enter_admin_pin">הכנס קוד מנהל</string>
     <string name="pin">קוד</string>
     <string name="incorrect_pin">קוד שגוי</string>
-    <string name="unlock">פתח</string>
-    
+    <string name="unlock">פתיחה</string>
+
     <!-- Settings Screen -->
     <string name="language">שפה</string>
     <string name="english">אנגלית</string>
@@ -50,4 +50,69 @@
     <string name="large">גדול</string>
     <string name="slow">איטי</string>
     <string name="fast">מהיר</string>
+    <string name="user_profile">פרופיל משתמש</string>
+    <string name="disability_type">סוג מוגבלות</string>
+    <string name="disability_none">ללא / כללי</string>
+    <string name="disability_motor">מוגבלות מוטורית</string>
+    <string name="disability_visual">מוגבלות בראייה</string>
+    <string name="disability_cognitive">מוגבלות קוגניטיבית</string>
+    <string name="disability_aphasia">אפאזיה</string>
+
+    <!-- Location Suggestions -->
+    <string name="location_suggestions">הצעות מיקום</string>
+    <string name="enable_location_suggestions">אפשר הצעות מיקום</string>
+    <string name="location_detected_title">מיקום זוהה</string>
+    <string name="location_detected_message">נראה שאתה ב-\'%1$s\'. האם ברצונך ליצור לוח חדש למקום זה?</string>
+    <string name="yes_create_board">כן, צור לוח</string>
+    <string name="no_thanks">לא תודה</string>
+
+    <!-- General UI -->
+    <string name="save">שמור</string>
+    <string name="edit_board_title">ערוך לוח</string>
+    <string name="delete_board_button">מחק לוח</string>
+    <string name="change_icon_desc">שנה סמל</string>
+    <string name="error_prefix">שגיאה: </string>
+
+    <!-- Default Boards Data -->
+    <string name="board_food_name">אוכל ושתייה</string>
+    <string name="board_feelings_name">רגשות</string>
+    <string name="board_learn_name">לימודים</string>
+    <string name="board_home_name">לוח בית</string>
+
+    <string name="btn_i_want">אני רוצה</string>
+    <string name="btn_water">מים</string>
+    <string name="btn_milk">חלב</string>
+    <string name="btn_juice">מיץ</string>
+    <string name="btn_apple">תפוח</string>
+    <string name="btn_banana">בננה</string>
+    <string name="btn_sandwich">סנדוויץ\'</string>
+    <string name="btn_cookie">עוגיה</string>
+    <string name="btn_yes">כן</string>
+    <string name="btn_no">לא</string>
+    <string name="btn_more">עוד</string>
+    <string name="btn_all_done">סיימתי</string>
+    <string name="btn_back_home">הביתה</string>
+
+    <string name="btn_i_feel">אני מרגיש</string>
+    <string name="btn_happy">שמח</string>
+    <string name="btn_sad">עצוב</string>
+    <string name="btn_mad">כועס</string>
+    <string name="btn_tired">עייף</string>
+    <string name="btn_scared">מפוחד</string>
+    <string name="btn_excited">מתרגש</string>
+    <string name="btn_sick">חולה</string>
+
+    <string name="btn_i_see">אני רואה</string>
+    <string name="btn_book">ספר</string>
+    <string name="btn_crayon">צבע</string>
+    <string name="btn_tablet">טאבלט</string>
+    
+    <string name="btn_stop">עצור</string>
+    <string name="btn_help">עזרה</string>
+    <string name="btn_bathroom">שירותים</string>
+    <string name="btn_play">לשחק</string>
+
+    <string name="spoken_help">עזור לי בבקשה</string>
+    <string name="spoken_bathroom">אני צריך לשירותים</string>
+    <string name="spoken_play">אני רוצה לשחק</string>
 </resources>

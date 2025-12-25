@@ -16,7 +16,8 @@ data class AacButton(
     val iconPath: String? = null, // Path to local asset or URL
     val backgroundColor: Long = 0xFFFFFFFF, // Storing as Long for easy serialization, or could use Color
     val action: ButtonAction = ButtonAction.Speak(label),
-    val hidden: Boolean = false
+    val hidden: Boolean = false,
+    val topic: String? = null
 ) {
     // Helper to get actual text to speak
     val textToSpeak: String

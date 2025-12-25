@@ -149,11 +149,13 @@ class GeminiService(private val apiKey: String) {
     }
 
     // predictNextButtons removed
-    suspend fun generateBoard(topic: String): List<String> {
+    suspend fun generateBoard(topic: String, languageCode: String = "en"): List<String> {
         return withContext(Dispatchers.IO) {
+            val languageName = if (languageCode == "iw" || languageCode == "he") "Hebrew" else "English"
             val prompt = """
                 Create a list of 16 vocabulary words related to the topic '$topic' for an AAC communication board.
                 Includes nouns, verbs, and adjectives.
+                Output the words in $languageName.
                 Return ONLY the words, separated by commas.
                 Example: Dog, Cat, Pet, Walk, Furry, Bark
             """.trimIndent()
@@ -165,6 +167,31 @@ class GeminiService(private val apiKey: String) {
             } catch (e: Exception) {
                 e.printStackTrace()
                 emptyList()
+            }
+        }
+    }
+
+    suspend fun simplifyLocationName(rawName: String, languageCode: String = "en"): String {
+        return withContext(Dispatchers.IO) {
+            val languageName = if (languageCode == "iw" || languageCode == "he") "Hebrew" else "English"
+            val prompt = """
+                Convert this specific location name to a generic category suitable for an AAC board recommendation.
+                Output the category in $languageName.
+                Examples (if English): 
+                - 'The Grand Urban Mall' -> 'Mall'
+                - 'St. Mary's School' -> 'School'
+                
+                Location: "$rawName"
+                
+                Return ONLY the single category word.
+            """.trimIndent()
+
+            try {
+                val response = textModel.generateContent(prompt)
+                response.text?.trim() ?: rawName
+            } catch (e: Exception) {
+                e.printStackTrace()
+                rawName // Fallback to original name
             }
         }
     }

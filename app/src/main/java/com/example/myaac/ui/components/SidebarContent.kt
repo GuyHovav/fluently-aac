@@ -1,7 +1,9 @@
 package com.example.myaac.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,11 +13,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,7 +39,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.myaac.model.Board
@@ -47,12 +56,13 @@ fun SidebarContent(
     onBoardSelect: (Board) -> Unit,
     onCreateBoard: (String, String) -> Unit,
     onDeleteBoard: (Board) -> Unit,
+    onUpdateBoard: (Board) -> Unit,
     onUnlock: (String) -> Boolean,
     onLock: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
-    var boardToDelete by remember { mutableStateOf<Board?>(null) }
+    var boardToEdit by remember { mutableStateOf<Board?>(null) }
     var showPinDialog by remember { mutableStateOf(false) }
 
     if (showCreateDialog) {
@@ -65,26 +75,17 @@ fun SidebarContent(
         )
     }
     
-    if (boardToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { boardToDelete = null },
-            title = { Text("Delete Board?") },
-            text = { Text("Are you sure you want to delete '${boardToDelete?.name}'? This cannot be undone.") },
-            confirmButton = {
-                Button(
-                    onClick = { 
-                        boardToDelete?.let { onDeleteBoard(it) }
-                        boardToDelete = null 
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                     Text("Delete")
-                }
+    if (boardToEdit != null) {
+        EditBoardDialog(
+            board = boardToEdit!!,
+            onDismiss = { boardToEdit = null },
+            onSave = { updatedBoard ->
+                onUpdateBoard(updatedBoard)
+                boardToEdit = null
             },
-            dismissButton = {
-                TextButton(onClick = { boardToDelete = null }) {
-                    Text("Cancel")
-                }
+            onDelete = {
+                onDeleteBoard(boardToEdit!!)
+                boardToEdit = null
             }
         )
     }
@@ -95,7 +96,7 @@ fun SidebarContent(
 
         AlertDialog(
             onDismissRequest = { showPinDialog = false },
-            title = { Text("Enter Admin PIN") },
+            title = { Text(stringResource(R.string.enter_admin_pin)) },
             text = {
                 Column {
                     OutlinedTextField(
@@ -104,14 +105,14 @@ fun SidebarContent(
                             pin = it
                             error = false
                         },
-                        label = { Text("PIN") },
+                        label = { Text(stringResource(R.string.pin)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         isError = error
                     )
                     if (error) {
                         Text(
-                            "Incorrect PIN",
+                            stringResource(R.string.incorrect_pin),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -126,12 +127,12 @@ fun SidebarContent(
                         error = true
                     }
                 }) {
-                    Text("Unlock")
+                    Text(stringResource(R.string.unlock))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showPinDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -139,7 +140,7 @@ fun SidebarContent(
 
     ModalDrawerSheet {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Boards", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.boards), style = MaterialTheme.typography.titleLarge)
             if (isCaregiverMode) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
@@ -147,7 +148,7 @@ fun SidebarContent(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
-                    Text("New Board")
+                    Text(stringResource(R.string.new_board))
                 }
             }
         }
@@ -160,17 +161,16 @@ fun SidebarContent(
                     onClick = { onBoardSelect(board) },
                     icon = { Icon(Icons.Default.Folder, contentDescription = null) },
                     badge = {
-                        // Don't allow deleting home board (assuming id "home" is fixed)
-                        if (isCaregiverMode && board.id != "home") {
-                            androidx.compose.material3.IconButton(onClick = { boardToDelete = board }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-            }
-        }
+                if (isCaregiverMode) {
+                    androidx.compose.material3.IconButton(onClick = { boardToEdit = board }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+    }
+}
         
         Spacer(modifier = Modifier.weight(1f))
         Divider()
@@ -196,14 +196,14 @@ fun SidebarContent(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {
-                    Text("Exit Admin Mode")
+                    Text(stringResource(R.string.exit_admin_mode))
                 }
             } else {
                 TextButton(
                     onClick = { showPinDialog = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Enter Admin Mode")
+                    Text(stringResource(R.string.enter_admin_mode))
                 }
             }
         }
@@ -217,26 +217,26 @@ fun CreateBoardDialog(onDismiss: () -> Unit, onCreate: (String, String) -> Unit)
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create New Board") },
+        title = { Text(stringResource(R.string.create_new_board)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Board Name") },
+                    label = { Text(stringResource(R.string.board_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = topic,
                     onValueChange = { topic = it },
-                    label = { Text("Topic (Optional - Magic!)") },
-                    placeholder = { Text("e.g. Zoo, Beach, Kitchen") },
+                    label = { Text(stringResource(R.string.topic_optional)) },
+                    placeholder = { Text(stringResource(R.string.topic_hint)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (topic.isNotBlank()) {
                      Text(
-                         text = "✨ Magic Board will be generated using AI",
+                         text = stringResource(R.string.magic_board_will_be_generated),
                          style = MaterialTheme.typography.bodySmall,
                          color = MaterialTheme.colorScheme.primary,
                          modifier = Modifier.padding(top = 4.dp)
@@ -246,12 +246,137 @@ fun CreateBoardDialog(onDismiss: () -> Unit, onCreate: (String, String) -> Unit)
         },
         confirmButton = {
             Button(onClick = { if (name.isNotBlank()) onCreate(name, topic) }) {
-                Text(if (topic.isNotBlank()) " ✨ Magic Create" else "Create")
+                Text(if (topic.isNotBlank()) stringResource(R.string.magic_create) else stringResource(R.string.create))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+fun EditBoardDialog(
+    board: Board,
+    onDismiss: () -> Unit,
+    onSave: (Board) -> Unit,
+    onDelete: () -> Unit
+) {
+    var name by remember { mutableStateOf(board.name) }
+    var iconPath by remember { mutableStateOf(board.iconPath) }
+    var showIconSearch by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    if (showIconSearch) {
+        SymbolSearchDialog(
+            initialQuery = name,
+            onDismiss = { showIconSearch = false },
+            onSymbolSelected = { url, _ ->
+                iconPath = url
+                showIconSearch = false
+            }
+        )
+    }
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text(stringResource(R.string.delete_board_title)) },
+            text = { Text(stringResource(R.string.delete_board_message, board.name)) },
+            confirmButton = {
+                Button(
+                    onClick = { 
+                        onDelete()
+                        showDeleteConfirmation = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                     Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_board_title)) },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Icon Preview / Changer
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { showIconSearch = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (iconPath != null) {
+                        coil.compose.AsyncImage(
+                            model = iconPath,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(48.dp))
+                    }
+                    
+                    // Edit Overlay
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp))
+                            .padding(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = stringResource(R.string.change_icon_desc),
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.board_name)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                // Delete Button (Only on regular boards, not home)
+                if (board.id != "home") {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    OutlinedButton(
+                        onClick = { showDeleteConfirmation = true },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.delete_board_button))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                onSave(board.copy(name = name, iconPath = iconPath))
+            }) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
             }
         }
     )

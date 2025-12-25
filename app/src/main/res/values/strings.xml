@@ -50,4 +50,69 @@
     <string name="large">Large</string>
     <string name="slow">Slow</string>
     <string name="fast">Fast</string>
+    <string name="user_profile">User Profile</string>
+    <string name="disability_type">Disability Type</string>
+    <string name="disability_none">None / General</string>
+    <string name="disability_motor">Motor Impairment</string>
+    <string name="disability_visual">Visual Impairment</string>
+    <string name="disability_cognitive">Cognitive Impairment</string>
+    <string name="disability_aphasia">Aphasia</string>
+    
+    <!-- Location Suggestions -->
+    <string name="location_detected_title">Location Detected</string>
+    <string name="location_detected_message">It looks like you are at \'%1$s\'. Would you like to create a new board for this place?</string>
+    <string name="yes_create_board">Yes, Create Board</string>
+    <string name="no_thanks">No Thanks</string>
+    <string name="location_suggestions">Location Suggestions</string>
+    <string name="enable_location_suggestions">Enable Location Suggestions</string>
+
+    <!-- General UI -->
+    <string name="save">Save</string>
+    <string name="edit_board_title">Edit Board</string>
+    <string name="delete_board_button">Delete Board</string>
+    <string name="change_icon_desc">Change Icon</string>
+    <string name="error_prefix">Error: </string>
+
+    <!-- Default Boards Data -->
+    <string name="board_food_name">Food &amp; Drink</string>
+    <string name="board_feelings_name">Feelings</string>
+    <string name="board_learn_name">Learn</string>
+    <string name="board_home_name">Home Board</string>
+
+    <string name="btn_i_want">I want</string>
+    <string name="btn_water">Water</string>
+    <string name="btn_milk">Milk</string>
+    <string name="btn_juice">Juice</string>
+    <string name="btn_apple">Apple</string>
+    <string name="btn_banana">Banana</string>
+    <string name="btn_sandwich">Sandwich</string>
+    <string name="btn_cookie">Cookie</string>
+    <string name="btn_yes">Yes</string>
+    <string name="btn_no">No</string>
+    <string name="btn_more">More</string>
+    <string name="btn_all_done">All Done</string>
+    <string name="btn_back_home">Back Home</string>
+
+    <string name="btn_i_feel">I feel</string>
+    <string name="btn_happy">Happy</string>
+    <string name="btn_sad">Sad</string>
+    <string name="btn_mad">Mad</string>
+    <string name="btn_tired">Tired</string>
+    <string name="btn_scared">Scared</string>
+    <string name="btn_excited">Excited</string>
+    <string name="btn_sick">Sick</string>
+
+    <string name="btn_i_see">I see</string>
+    <string name="btn_book">Book</string>
+    <string name="btn_crayon">Crayon</string>
+    <string name="btn_tablet">Tablet</string>
+    
+    <string name="btn_stop">Stop</string>
+    <string name="btn_help">Help</string>
+    <string name="btn_bathroom">Bathroom</string>
+    <string name="btn_play">Play</string>
+
+    <string name="spoken_help">Help me please</string>
+    <string name="spoken_bathroom">I need to use the bathroom</string>
+    <string name="spoken_play">I want to play</string>
 </resources>

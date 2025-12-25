@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import com.example.myaac.data.remote.ArasaacService
 import com.example.myaac.data.remote.GeminiService
 import com.example.myaac.data.repository.SettingsRepository
@@ -24,18 +27,29 @@ data class BoardUiState(
     val sentence: List<AacButton> = emptyList(),
     // Predictions removed
     val isCaregiverMode: Boolean = false,
-    val textScale: Float = 1.0f
+    val textScale: Float = 1.0f,
+    val isLoading: Boolean = false
 )
 
 class BoardViewModel(
+    private val application: android.app.Application,
     private val repository: BoardRepository,
     private val settingsRepository: SettingsRepository,
     private val geminiService: GeminiService? = null,
     private val arasaacService: ArasaacService = ArasaacService()
-) : ViewModel() {
+) : androidx.lifecycle.AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(BoardUiState())
     val uiState: StateFlow<BoardUiState> = _uiState.asStateFlow()
+
+    // Helper to get string in selected language
+    private fun getString(resId: Int): String {
+        val langCode = settingsRepository.settings.value.languageCode
+        val locale = if (langCode == "iw") java.util.Locale("iw") else java.util.Locale.ENGLISH
+        val config = android.content.res.Configuration(application.resources.configuration)
+        config.setLocale(locale)
+        return application.createConfigurationContext(config).getString(resId)
+    }
 
     init {
         viewModelScope.launch {
@@ -58,80 +72,84 @@ class BoardViewModel(
         }
     }
 
-    private suspend fun initializePreloadedBoards() {
+    private suspend fun initializePreloadedBoards() = coroutineScope {
         val foodId = "board_food"
         val learnId = "board_learn"
         val feelId = "board_feelings"
         val homeId = "home"
+        
+        val currentLang = settingsRepository.settings.value.languageCode
+        val localeStr = if (currentLang == "iw") "he" else "en"
 
         // 1. Food Board
-        val foodButtons = listOf(
-            createButton(foodId, 0, "I want", 0xFFE0E0E0, ButtonAction.Speak("I want")),
-            createButton(foodId, 1, "Water", 0xFFBBDEFB, ButtonAction.Speak("Water")),
-            createButton(foodId, 2, "Milk", 0xFFBBDEFB, ButtonAction.Speak("Milk")),
-            createButton(foodId, 3, "Juice", 0xFFBBDEFB, ButtonAction.Speak("Juice")),
-            createButton(foodId, 4, "Apple", 0xFFFFCDD2, ButtonAction.Speak("Apple")),
-            createButton(foodId, 5, "Banana", 0xFFFFF9C4, ButtonAction.Speak("Banana")),
-            createButton(foodId, 6, "Sandwich", 0xFFFFE0B2, ButtonAction.Speak("Sandwich")),
-            createButton(foodId, 7, "Cookie", 0xFFFFE0B2, ButtonAction.Speak("Cookie")),
-            createButton(foodId, 8, "Yes", 0xFFC8E6C9, ButtonAction.Speak("Yes")),
-            createButton(foodId, 9, "No", 0xFFFFCDD2, ButtonAction.Speak("No")),
-            createButton(foodId, 10, "More", 0xFFE1BEE7, ButtonAction.Speak("More")),
-            createButton(foodId, 11, "All Done", 0xFFCFD8DC, ButtonAction.Speak("All Done")),
-            // Navigation Back
-            createButton(foodId, 15, "Back Home", 0xFFFFCC80, ButtonAction.LinkToBoard(homeId))
-        ).toMutableList()
-        // Fill gaps
+        val foodDeferred = listOf(
+            async { createButtonWithSymbol(foodId, 0, getString(com.example.myaac.R.string.btn_i_want), 0xFFE0E0E0, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_i_want)), "want", localeStr) },
+            async { createButtonWithSymbol(foodId, 1, getString(com.example.myaac.R.string.btn_water), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_water)), null, localeStr) },
+            async { createButtonWithSymbol(foodId, 2, getString(com.example.myaac.R.string.btn_milk), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_milk)), null, localeStr) },
+            async { createButtonWithSymbol(foodId, 3, getString(com.example.myaac.R.string.btn_juice), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_juice)), null, localeStr) },
+            async { createButtonWithSymbol(foodId, 4, getString(com.example.myaac.R.string.btn_apple), 0xFFFFCDD2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_apple)), null, localeStr) },
+            async { createButtonWithSymbol(foodId, 5, getString(com.example.myaac.R.string.btn_banana), 0xFFFFF9C4, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_banana)), null, localeStr) },
+            async { createButtonWithSymbol(foodId, 6, getString(com.example.myaac.R.string.btn_sandwich), 0xFFFFE0B2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_sandwich)), null, localeStr) },
+            async { createButtonWithSymbol(foodId, 7, getString(com.example.myaac.R.string.btn_cookie), 0xFFFFE0B2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_cookie)), null, localeStr) },
+            async { createButtonWithSymbol(foodId, 8, getString(com.example.myaac.R.string.btn_yes), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_yes)), null, localeStr) },
+            async { createButtonWithSymbol(foodId, 9, getString(com.example.myaac.R.string.btn_no), 0xFFFFCDD2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_no)), null, localeStr) },
+            async { createButtonWithSymbol(foodId, 10, getString(com.example.myaac.R.string.btn_more), 0xFFE1BEE7, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_more)), null, localeStr) },
+            async { createButtonWithSymbol(foodId, 11, getString(com.example.myaac.R.string.btn_all_done), 0xFFCFD8DC, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_all_done)), "finished", localeStr) },
+            async { createButtonWithSymbol(foodId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
+        )
+        val foodButtons = foodDeferred.awaitAll().toMutableList()
         fillGaps(foodButtons, foodId)
-        repository.saveBoard(Board(foodId, "Food & Drink", buttons = foodButtons))
+        repository.saveBoard(Board(foodId, getString(com.example.myaac.R.string.board_food_name), buttons = foodButtons, iconPath = "https://static.arasaac.org/pictograms/4610/4610_300.png"))
 
         // 2. Feelings Board
-        val feelButtons = listOf(
-            createButton(feelId, 0, "I feel", 0xFFE0E0E0, ButtonAction.Speak("I feel")),
-            createButton(feelId, 1, "Happy", 0xFFFFF9C4, ButtonAction.Speak("Happy")),
-            createButton(feelId, 2, "Sad", 0xFFE1BEE7, ButtonAction.Speak("Sad")),
-            createButton(feelId, 3, "Mad", 0xFFFFCDD2, ButtonAction.Speak("Mad")),
-            createButton(feelId, 4, "Tired", 0xFFBBDEFB, ButtonAction.Speak("Tired")),
-            createButton(feelId, 5, "Scared", 0xFFCFD8DC, ButtonAction.Speak("Scared")),
-            createButton(feelId, 6, "Excited", 0xFFC8E6C9, ButtonAction.Speak("Excited")),
-            createButton(feelId, 7, "Sick", 0xFFB2DFDB, ButtonAction.Speak("Sick")),
-            createButton(feelId, 15, "Back Home", 0xFFFFCC80, ButtonAction.LinkToBoard(homeId))
-        ).toMutableList()
+        val feelDeferred = listOf(
+            async { createButtonWithSymbol(feelId, 0, getString(com.example.myaac.R.string.btn_i_feel), 0xFFE0E0E0, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_i_feel)), "feeling", localeStr) },
+            async { createButtonWithSymbol(feelId, 1, getString(com.example.myaac.R.string.btn_happy), 0xFFFFF9C4, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_happy)), null, localeStr) },
+            async { createButtonWithSymbol(feelId, 2, getString(com.example.myaac.R.string.btn_sad), 0xFFE1BEE7, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_sad)), null, localeStr) },
+            async { createButtonWithSymbol(feelId, 3, getString(com.example.myaac.R.string.btn_mad), 0xFFFFCDD2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_mad)), "angry", localeStr) },
+            async { createButtonWithSymbol(feelId, 4, getString(com.example.myaac.R.string.btn_tired), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_tired)), null, localeStr) },
+            async { createButtonWithSymbol(feelId, 5, getString(com.example.myaac.R.string.btn_scared), 0xFFCFD8DC, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_scared)), null, localeStr) },
+            async { createButtonWithSymbol(feelId, 6, getString(com.example.myaac.R.string.btn_excited), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_excited)), null, localeStr) },
+            async { createButtonWithSymbol(feelId, 7, getString(com.example.myaac.R.string.btn_sick), 0xFFB2DFDB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_sick)), null, localeStr) },
+            async { createButtonWithSymbol(feelId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
+        )
+        val feelButtons = feelDeferred.awaitAll().toMutableList()
         fillGaps(feelButtons, feelId)
-        repository.saveBoard(Board(feelId, "Feelings", buttons = feelButtons))
+        repository.saveBoard(Board(feelId, getString(com.example.myaac.R.string.board_feelings_name), buttons = feelButtons, iconPath = "https://static.arasaac.org/pictograms/37190/37190_300.png"))
 
         // 3. Learn/School Board
-        val learnButtons = listOf(
-             createButton(learnId, 0, "I see", 0xFFE0E0E0, ButtonAction.Speak("I see")),
-             createButton(learnId, 1, "Book", 0xFFFFF9C4, ButtonAction.Speak("Book")),
-             createButton(learnId, 2, "Crayon", 0xFFFF8A65, ButtonAction.Speak("Crayon")),
-             createButton(learnId, 3, "Tablet", 0xFFBBDEFB, ButtonAction.Speak("Tablet")),
-             createButton(learnId, 15, "Back Home", 0xFFFFCC80, ButtonAction.LinkToBoard(homeId))
-        ).toMutableList()
+        val learnDeferred = listOf(
+             async { createButtonWithSymbol(learnId, 0, getString(com.example.myaac.R.string.btn_i_see), 0xFFE0E0E0, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_i_see)), "see", localeStr) },
+             async { createButtonWithSymbol(learnId, 1, getString(com.example.myaac.R.string.btn_book), 0xFFFFF9C4, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_book)), null, localeStr) },
+             async { createButtonWithSymbol(learnId, 2, getString(com.example.myaac.R.string.btn_crayon), 0xFFFF8A65, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_crayon)), null, localeStr) },
+             async { createButtonWithSymbol(learnId, 3, getString(com.example.myaac.R.string.btn_tablet), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_tablet)), null, localeStr) },
+             async { createButtonWithSymbol(learnId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
+        )
+        val learnButtons = learnDeferred.awaitAll().toMutableList()
         fillGaps(learnButtons, learnId)
-        repository.saveBoard(Board(learnId, "Learn", buttons = learnButtons))
+        repository.saveBoard(Board(learnId, getString(com.example.myaac.R.string.board_learn_name), buttons = learnButtons, iconPath = "https://static.arasaac.org/pictograms/32446/32446_300.png"))
 
         // 4. Home Board (Hub)
-        val homeButtons = mutableListOf<AacButton>()
-        // Top Row: Core words
-        homeButtons.add(createButton(homeId, 0, "I want", 0xFFE0E0E0, ButtonAction.Speak("I want")))
-        homeButtons.add(createButton(homeId, 1, "Stop", 0xFFFFCDD2, ButtonAction.Speak("Stop")))
-        homeButtons.add(createButton(homeId, 2, "Yes", 0xFFC8E6C9, ButtonAction.Speak("Yes")))
-        homeButtons.add(createButton(homeId, 3, "No", 0xFFFFCDD2, ButtonAction.Speak("No")))
-        
-        // Folder Links (Middle)
-        homeButtons.add(createButton(homeId, 4, "Food", 0xFFFFE0B2, ButtonAction.LinkToBoard(foodId)))
-        homeButtons.add(createButton(homeId, 5, "Feelings", 0xFFE1BEE7, ButtonAction.LinkToBoard(feelId)))
-        homeButtons.add(createButton(homeId, 6, "Learn", 0xFFBBDEFB, ButtonAction.LinkToBoard(learnId)))
-        
-        // Common Actions
-        homeButtons.add(createButton(homeId, 8, "Help", 0xFFB2DFDB, ButtonAction.Speak("Help me please")))
-        homeButtons.add(createButton(homeId, 9, "Bathroom", 0xFFCFD8DC, ButtonAction.Speak("I need to use the bathroom")))
-        homeButtons.add(createButton(homeId, 10, "Play", 0xFFC5CAE9, ButtonAction.Speak("I want to play")))
-
+        val homeDeferred = listOf(
+            async { createButtonWithSymbol(homeId, 0, getString(com.example.myaac.R.string.btn_i_want), 0xFFE0E0E0, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_i_want)), "want", localeStr) },
+            async { createButtonWithSymbol(homeId, 1, getString(com.example.myaac.R.string.btn_stop), 0xFFFFCDD2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_stop)), null, localeStr) },
+            async { createButtonWithSymbol(homeId, 2, getString(com.example.myaac.R.string.btn_yes), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_yes)), null, localeStr) },
+            async { createButtonWithSymbol(homeId, 3, getString(com.example.myaac.R.string.btn_no), 0xFFFFCDD2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_no)), null, localeStr) },
+            
+            // Folder Links
+            async { createButtonWithSymbol(homeId, 4, getString(com.example.myaac.R.string.board_food_name), 0xFFFFE0B2, ButtonAction.LinkToBoard(foodId), null, localeStr) },
+            async { createButtonWithSymbol(homeId, 5, getString(com.example.myaac.R.string.board_feelings_name), 0xFFE1BEE7, ButtonAction.LinkToBoard(feelId), null, localeStr) },
+            async { createButtonWithSymbol(homeId, 6, getString(com.example.myaac.R.string.board_learn_name), 0xFFBBDEFB, ButtonAction.LinkToBoard(learnId), null, localeStr) },
+            
+            // Common Actions
+            async { createButtonWithSymbol(homeId, 8, getString(com.example.myaac.R.string.btn_help), 0xFFB2DFDB, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_help)), "help", localeStr) },
+            async { createButtonWithSymbol(homeId, 9, getString(com.example.myaac.R.string.btn_bathroom), 0xFFCFD8DC, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_bathroom)), "toilet", localeStr) },
+            async { createButtonWithSymbol(homeId, 10, getString(com.example.myaac.R.string.btn_play), 0xFFC5CAE9, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_play)), "play", localeStr) }
+        )
+        val homeButtons = homeDeferred.awaitAll().toMutableList()
         fillGaps(homeButtons, homeId)
         
-        repository.saveBoard(Board(homeId, "Home Board", buttons = homeButtons))
+        repository.saveBoard(Board(homeId, getString(com.example.myaac.R.string.board_home_name), buttons = homeButtons, iconPath = "https://static.arasaac.org/pictograms/6964/6964_300.png"))
     }
 
     private fun createButton(boardId: String, index: Int, label: String, color: Long, action: ButtonAction): AacButton {
@@ -142,6 +160,31 @@ class BoardViewModel(
             backgroundColor = color,
             action = action
         )
+    }
+
+    private suspend fun createButtonWithSymbol(
+        boardId: String, 
+        index: Int, 
+        label: String, 
+        color: Long, 
+        action: ButtonAction, 
+        searchTerm: String? = null,
+        locale: String = "en"
+    ): AacButton {
+        val query = searchTerm ?: label
+        var iconPath: String? = null
+        if (query.isNotEmpty()) {
+             try {
+                val searchResults = arasaacService.searchPictograms(query, locale)
+                if (searchResults.isNotEmpty()) {
+                    iconPath = arasaacService.getImageUrl(searchResults[0]._id)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+       
+        return createButton(boardId, index, label, color, action).copy(iconPath = iconPath)
     }
     
     // Fill empty slots up to 16
@@ -160,13 +203,30 @@ class BoardViewModel(
 
     fun createNewBoard(name: String) {
         viewModelScope.launch {
-            val newId = java.util.UUID.randomUUID().toString()
-            val buttons = List(16) { index ->
-                createButton(newId, index, "", 0xFFFFFFFF, ButtonAction.Speak(""))
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val newId = java.util.UUID.randomUUID().toString()
+                val buttons = List(16) { index ->
+                    createButton(newId, index, "", 0xFFFFFFFF, ButtonAction.Speak(""))
+                }
+                
+                // Try to find an icon for the board name
+                var iconPath: String? = null
+                try {
+                    val searchResults = arasaacService.searchPictograms(name, java.util.Locale.getDefault().language)
+                    if (searchResults.isNotEmpty()) {
+                        iconPath = arasaacService.getImageUrl(searchResults[0]._id)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                val newBoard = Board(id = newId, name = name, buttons = buttons, iconPath = iconPath)
+                repository.saveBoard(newBoard)
+                _uiState.update { it.copy(currentBoard = newBoard) }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
             }
-            val newBoard = Board(id = newId, name = name, buttons = buttons)
-            repository.saveBoard(newBoard)
-            _uiState.update { it.copy(currentBoard = newBoard) }
         }
     }
     
@@ -180,52 +240,85 @@ class BoardViewModel(
     }
 
     fun createMagicBoard(name: String, topic: String) {
-        if (geminiService == null) return
+        val service = geminiService ?: return
         viewModelScope.launch {
-            val words = geminiService.generateBoard(topic)
-            val newId = java.util.UUID.randomUUID().toString()
-            
-            // Map words to buttons with symbols
-            val buttons = words.mapIndexed { index, word ->
-                var iconPath: String? = null
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val langCode = settingsRepository.settings.value.languageCode
+                val words = service.generateBoard(topic, langCode)
+                val newId = java.util.UUID.randomUUID().toString()
+                
+                // Map words to buttons with symbols using async fetches
+                val arasaacLocale = if (langCode == "iw") "he" else "en"
+                val deferredButtons = words.mapIndexed { index, word ->
+                    async {
+                        createButtonWithSymbol(
+                            boardId = newId, 
+                            index = index, 
+                            label = word, 
+                            color = 0xFFFFF9C4, 
+                            action = ButtonAction.Speak(word),
+                            searchTerm = word,
+                            locale = arasaacLocale
+                        )
+                    }
+                }
+                
+                val buttons = deferredButtons.awaitAll().toMutableList()
+
+                // Fill remaining slots
+                val currentSize = buttons.size
+                for (i in currentSize..15) {
+                   buttons.add(createButton(newId, i, "", 0xFFFFFFFF, ButtonAction.Speak("")))
+                }
+                
+                // Try to find an icon for the topic
+                var boardIconPath: String? = null
                 try {
-                     val searchResults = arasaacService.searchPictograms(word)
-                     if (searchResults.isNotEmpty()) {
-                         iconPath = arasaacService.getImageUrl(searchResults[0]._id)
-                     }
+                    val searchResults = arasaacService.searchPictograms(topic, arasaacLocale)
+                    if (searchResults.isNotEmpty()) {
+                        boardIconPath = arasaacService.getImageUrl(searchResults[0]._id)
+                    }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
-
-                createButton(newId, index, word, 0xFFFFF9C4, ButtonAction.Speak(word))
-                    .copy(iconPath = iconPath)
-            }.toMutableList()
-
-            // Fill remaining slots
-            val currentSize = buttons.size
-            for (i in currentSize..15) {
-               buttons.add(createButton(newId, i, "", 0xFFFFFFFF, ButtonAction.Speak("")))
+                
+                val newBoard = Board(id = newId, name = name, buttons = buttons, iconPath = boardIconPath)
+                repository.saveBoard(newBoard)
+                _uiState.update { it.copy(currentBoard = newBoard) }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
             }
-            
-            val newBoard = Board(id = newId, name = name, buttons = buttons)
-            repository.saveBoard(newBoard)
-            _uiState.update { it.copy(currentBoard = newBoard) }
         }
     }
 
     fun deleteBoard(boardId: String) {
         viewModelScope.launch {
-            repository.deleteBoard(boardId)
-            // If the deleted board was the current one, go home
-            if (_uiState.value.currentBoard?.id == boardId) {
-                navigateToBoard("home")
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                repository.deleteBoard(boardId)
+                // If the deleted board was the current one, go home
+                if (_uiState.value.currentBoard?.id == boardId) {
+                    navigateToBoard("home")
+                }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    fun updateBoard(board: Board) {
+        viewModelScope.launch {
+            repository.saveBoard(board)
+            if (_uiState.value.currentBoard?.id == board.id) {
+                _uiState.update { it.copy(currentBoard = board) }
             }
         }
     }
 
     suspend fun checkSymbol(query: String): String? {
         return try {
-            val searchResults = arasaacService.searchPictograms(query)
+            val searchResults = arasaacService.searchPictograms(query, java.util.Locale.getDefault().language)
             if (searchResults.isNotEmpty()) {
                 arasaacService.getImageUrl(searchResults[0]._id)
             } else {
@@ -235,6 +328,10 @@ class BoardViewModel(
             e.printStackTrace()
             null
         }
+    }
+
+    suspend fun simplifyLocationName(rawName: String): String {
+        return geminiService?.simplifyLocationName(rawName, settingsRepository.settings.value.languageCode) ?: rawName
     }
 
     fun unlockCaregiverMode(pin: String): Boolean {
@@ -261,6 +358,17 @@ class BoardViewModel(
     // Explicitly defining list of boards is not strictly cached here, usually we get from repo in UI. 
     // If needed for ViewModel logic:
     val allBoards = repository.allBoards
+
+    fun doesBoardExist(name: String): Boolean {
+        // This is a bit of a hack since allBoards is a Flow, checking current cache is better via UI or collecting here
+        // For simplicity, we can assume the UI will check against the list it observes, OR
+        // we can check if any board in the current state's cache matches (if we tracked it)
+        // Better: Synchronous check for "does board with name exist" might need a suspend function in repo
+        // For now, let's rely on the UI passing this check or adding a quick check here if possible.
+        // Actually, let's use the allBoards flow value if collected (it's not collected here).
+        // Let's defer this check to the UI which has the list.
+        return false 
+    }
 
     fun onButtonPress(button: AacButton) {
         when (val action = button.action) {
@@ -323,7 +431,7 @@ class BoardViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MyAacApplication)
-                BoardViewModel(application.repository, application.settingsRepository, application.geminiService)
+                BoardViewModel(application, application.repository, application.settingsRepository, application.geminiService)
             }
         }
     }

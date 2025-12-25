@@ -49,6 +49,8 @@ fun EditButtonDialog(
     onDelete: () -> Unit
 ) {
     var label by remember { mutableStateOf(button.label) }
+    var topic by remember { mutableStateOf(button.topic ?: "") }
+    var isTopicEnabled by remember { mutableStateOf(button.topic != null) }
     var speechText by remember { mutableStateOf(button.speechText ?: "") }
     var selectedColor by remember { mutableStateOf(button.backgroundColor) }
     var imageUri by remember { mutableStateOf<Uri?>(button.iconPath?.let { Uri.parse(it) }) }
@@ -289,6 +291,37 @@ fun EditButtonDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Topic Toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Topic", style = MaterialTheme.typography.bodyLarge)
+                    Switch(
+                        checked = isTopicEnabled,
+                        onCheckedChange = { enabled ->
+                            isTopicEnabled = enabled
+                            if (enabled && topic.isBlank()) {
+                                topic = label
+                            }
+                        }
+                    )
+                }
+
+                if (isTopicEnabled) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = topic,
+                        onValueChange = { topic = it },
+                        label = { Text("Topic") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 // Color Picker
@@ -346,7 +379,8 @@ fun EditButtonDialog(
                                           ButtonAction.Speak(speechText.ifBlank { label })
                                      } else {
                                          button.action
-                                     }
+                                     },
+                                     topic = if (isTopicEnabled) topic.ifBlank { null } else null
                                  )
                              )
                          }) {
