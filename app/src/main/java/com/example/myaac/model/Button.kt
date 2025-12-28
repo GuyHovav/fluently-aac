@@ -17,7 +17,8 @@ data class AacButton(
     val backgroundColor: Long = 0xFFFFFFFF, // Storing as Long for easy serialization, or could use Color
     val action: ButtonAction = ButtonAction.Speak(label),
     val hidden: Boolean = false,
-    val topic: String? = null
+    val topic: String? = null,
+    val boundingBox: List<Float>? = null
 ) {
     // Helper to get actual text to speak
     val textToSpeak: String

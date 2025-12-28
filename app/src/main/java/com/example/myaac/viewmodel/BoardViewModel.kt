@@ -28,7 +28,8 @@ data class BoardUiState(
     // Predictions removed
     val isCaregiverMode: Boolean = false,
     val textScale: Float = 1.0f,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val selectedButtonIds: Set<String> = emptySet()
 )
 
 class BoardViewModel(
@@ -97,8 +98,7 @@ class BoardViewModel(
             async { createButtonWithSymbol(foodId, 11, getString(com.example.myaac.R.string.btn_all_done), 0xFFCFD8DC, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_all_done)), "finished", localeStr) },
             async { createButtonWithSymbol(foodId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
         )
-        val foodButtons = foodDeferred.awaitAll().toMutableList()
-        fillGaps(foodButtons, foodId)
+        val foodButtons = foodDeferred.awaitAll()
         repository.saveBoard(Board(foodId, getString(com.example.myaac.R.string.board_food_name), buttons = foodButtons, iconPath = "https://static.arasaac.org/pictograms/4610/4610_300.png"))
 
         // 2. Feelings Board
@@ -113,8 +113,7 @@ class BoardViewModel(
             async { createButtonWithSymbol(feelId, 7, getString(com.example.myaac.R.string.btn_sick), 0xFFB2DFDB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_sick)), null, localeStr) },
             async { createButtonWithSymbol(feelId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
         )
-        val feelButtons = feelDeferred.awaitAll().toMutableList()
-        fillGaps(feelButtons, feelId)
+        val feelButtons = feelDeferred.awaitAll()
         repository.saveBoard(Board(feelId, getString(com.example.myaac.R.string.board_feelings_name), buttons = feelButtons, iconPath = "https://static.arasaac.org/pictograms/37190/37190_300.png"))
 
         // 3. Learn/School Board
@@ -125,8 +124,7 @@ class BoardViewModel(
              async { createButtonWithSymbol(learnId, 3, getString(com.example.myaac.R.string.btn_tablet), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_tablet)), null, localeStr) },
              async { createButtonWithSymbol(learnId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
         )
-        val learnButtons = learnDeferred.awaitAll().toMutableList()
-        fillGaps(learnButtons, learnId)
+        val learnButtons = learnDeferred.awaitAll()
         repository.saveBoard(Board(learnId, getString(com.example.myaac.R.string.board_learn_name), buttons = learnButtons, iconPath = "https://static.arasaac.org/pictograms/32446/32446_300.png"))
 
         // 4. Home Board (Hub)
@@ -146,8 +144,7 @@ class BoardViewModel(
             async { createButtonWithSymbol(homeId, 9, getString(com.example.myaac.R.string.btn_bathroom), 0xFFCFD8DC, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_bathroom)), "toilet", localeStr) },
             async { createButtonWithSymbol(homeId, 10, getString(com.example.myaac.R.string.btn_play), 0xFFC5CAE9, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_play)), "play", localeStr) }
         )
-        val homeButtons = homeDeferred.awaitAll().toMutableList()
-        fillGaps(homeButtons, homeId)
+        val homeButtons = homeDeferred.awaitAll()
         
         repository.saveBoard(Board(homeId, getString(com.example.myaac.R.string.board_home_name), buttons = homeButtons, iconPath = "https://static.arasaac.org/pictograms/6964/6964_300.png"))
     }
@@ -201,32 +198,30 @@ class BoardViewModel(
         }
     }
 
-    fun createNewBoard(name: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+    suspend fun createNewBoard(name: String): String {
+        _uiState.update { it.copy(isLoading = true) }
+        val newId = java.util.UUID.randomUUID().toString()
+        try {
+            // Start with an empty board - no pre-filled slots
+            val buttons = emptyList<AacButton>()
+            
+            // Try to find an icon for the board name
+            var iconPath: String? = null
             try {
-                val newId = java.util.UUID.randomUUID().toString()
-                val buttons = List(16) { index ->
-                    createButton(newId, index, "", 0xFFFFFFFF, ButtonAction.Speak(""))
+                val searchResults = arasaacService.searchPictograms(name, java.util.Locale.getDefault().language)
+                if (searchResults.isNotEmpty()) {
+                    iconPath = arasaacService.getImageUrl(searchResults[0]._id)
                 }
-                
-                // Try to find an icon for the board name
-                var iconPath: String? = null
-                try {
-                    val searchResults = arasaacService.searchPictograms(name, java.util.Locale.getDefault().language)
-                    if (searchResults.isNotEmpty()) {
-                        iconPath = arasaacService.getImageUrl(searchResults[0]._id)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-
-                val newBoard = Board(id = newId, name = name, buttons = buttons, iconPath = iconPath)
-                repository.saveBoard(newBoard)
-                _uiState.update { it.copy(currentBoard = newBoard) }
-            } finally {
-                _uiState.update { it.copy(isLoading = false) }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
+
+            val newBoard = Board(id = newId, name = name, buttons = buttons, iconPath = iconPath)
+            repository.saveBoard(newBoard)
+            _uiState.update { it.copy(currentBoard = newBoard) }
+            return newId
+        } finally {
+            _uiState.update { it.copy(isLoading = false) }
         }
     }
     
@@ -239,56 +234,76 @@ class BoardViewModel(
         }
     }
 
-    fun createMagicBoard(name: String, topic: String) {
-        val service = geminiService ?: return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            try {
-                val langCode = settingsRepository.settings.value.languageCode
-                val words = service.generateBoard(topic, langCode)
-                val newId = java.util.UUID.randomUUID().toString()
-                
-                // Map words to buttons with symbols using async fetches
-                val arasaacLocale = if (langCode == "iw") "he" else "en"
-                val deferredButtons = words.mapIndexed { index, word ->
-                    async {
-                        createButtonWithSymbol(
-                            boardId = newId, 
-                            index = index, 
-                            label = word, 
-                            color = 0xFFFFF9C4, 
-                            action = ButtonAction.Speak(word),
-                            searchTerm = word,
-                            locale = arasaacLocale
-                        )
-                    }
+    suspend fun createMagicBoard(name: String, topic: String): String = coroutineScope {
+        val service = geminiService ?: throw IllegalStateException("Gemini Service not initialized")
+        _uiState.update { it.copy(isLoading = true) }
+        val newId = java.util.UUID.randomUUID().toString()
+        try {
+            val langCode = settingsRepository.settings.value.languageCode
+            val itemsToGenerate = settingsRepository.settings.value.itemsToGenerate
+            val words = service.generateBoard(topic, langCode, itemsToGenerate)
+            
+            // Map words to buttons with symbols using async fetches
+            val arasaacLocale = if (langCode == "iw") "he" else "en"
+            val deferredButtons = words.mapIndexed { index, word ->
+                async {
+                    createButtonWithSymbol(
+                        boardId = newId, 
+                        index = index, 
+                        label = word, 
+                        color = 0xFFFFF9C4, 
+                        action = ButtonAction.Speak(word),
+                        searchTerm = word,
+                        locale = arasaacLocale
+                    )
                 }
-                
-                val buttons = deferredButtons.awaitAll().toMutableList()
-
-                // Fill remaining slots
-                val currentSize = buttons.size
-                for (i in currentSize..15) {
-                   buttons.add(createButton(newId, i, "", 0xFFFFFFFF, ButtonAction.Speak("")))
-                }
-                
-                // Try to find an icon for the topic
-                var boardIconPath: String? = null
-                try {
-                    val searchResults = arasaacService.searchPictograms(topic, arasaacLocale)
-                    if (searchResults.isNotEmpty()) {
-                        boardIconPath = arasaacService.getImageUrl(searchResults[0]._id)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                
-                val newBoard = Board(id = newId, name = name, buttons = buttons, iconPath = boardIconPath)
-                repository.saveBoard(newBoard)
-                _uiState.update { it.copy(currentBoard = newBoard) }
-            } finally {
-                _uiState.update { it.copy(isLoading = false) }
             }
+            
+            val buttons = deferredButtons.awaitAll()
+            
+            // Try to find an icon for the topic
+            var boardIconPath: String? = null
+            try {
+                val searchResults = arasaacService.searchPictograms(topic, arasaacLocale)
+                if (searchResults.isNotEmpty()) {
+                    boardIconPath = arasaacService.getImageUrl(searchResults[0]._id)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            
+            val newBoard = Board(id = newId, name = name, buttons = buttons, iconPath = boardIconPath)
+            repository.saveBoard(newBoard)
+            _uiState.update { it.copy(currentBoard = newBoard) }
+            return@coroutineScope newId
+        } finally {
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    suspend fun addButtonToBoard(boardId: String, button: AacButton) {
+        val board = repository.getBoard(boardId) ?: return
+        val currentButtons = board.buttons.toMutableList()
+        
+        // Find first empty slot or append
+        // Logic: if we have "gap filling" logic, we might want to respect it, but for now just appending is safest
+        // unless we want to replace a placeholder.
+        // Step 1: Check if there's a "clean" placeholder to replace? 
+        // AacButton(label="", icon=null) is a placeholder.
+        val placeholderIndex = currentButtons.indexOfFirst { it.hidden || (it.label.isEmpty() && it.iconPath == null) }
+        
+        if (placeholderIndex != -1) {
+            currentButtons[placeholderIndex] = button.copy(id = "${boardId}_btn_${java.util.UUID.randomUUID()}")
+        } else {
+            currentButtons.add(button.copy(id = "${boardId}_btn_${java.util.UUID.randomUUID()}"))
+        }
+        
+        val updatedBoard = board.copy(buttons = currentButtons)
+        repository.saveBoard(updatedBoard)
+        
+        // If current board, update UI
+        if (_uiState.value.currentBoard?.id == boardId) {
+            _uiState.update { it.copy(currentBoard = updatedBoard) }
         }
     }
 
@@ -304,6 +319,199 @@ class BoardViewModel(
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }
+        }
+    }
+
+    fun expandBoard(board: Board, itemCount: Int) {
+        val service = geminiService ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                // Check if board isn't at capacity
+                val maxCapacity = settingsRepository.settings.value.maxBoardCapacity
+                if (board.buttons.size >= maxCapacity) {
+                    android.util.Log.d("BoardViewModel", "Board is at max capacity ($maxCapacity)")
+                    return@launch
+                }
+
+                // Calculate how many items we can actually add
+                val itemsToAdd = minOf(itemCount, maxCapacity - board.buttons.size)
+                
+                if (itemsToAdd <= 0) {
+                    android.util.Log.d("BoardViewModel", "No items to add")
+                    return@launch
+                }
+
+                // Get existing words to avoid duplicates
+                val existingWords = board.buttons.map { it.label }.filter { it.isNotEmpty() }
+                
+                // Generate new words
+                val langCode = settingsRepository.settings.value.languageCode
+                val topic = board.name 
+                
+                val newWords = service.generateMoreItems(topic, existingWords, itemsToAdd, langCode)
+                
+                if (newWords.isEmpty()) {
+                     android.util.Log.d("BoardViewModel", "No new words generated")
+                     return@launch
+                }
+
+                // Create new buttons
+                val arasaacLocale = if (langCode == "iw") "he" else "en"
+                val startIndex = board.buttons.size
+                val deferredNewButtons = newWords.mapIndexed { index, word ->
+                    async {
+                        createButtonWithSymbol(
+                            boardId = board.id,
+                            index = startIndex + index,
+                            label = word,
+                            color = 0xFFFFF9C4,
+                            action = ButtonAction.Speak(word),
+                            searchTerm = word,
+                            locale = arasaacLocale
+                        )
+                    }
+                }
+                
+                val newButtons = deferredNewButtons.awaitAll()
+                
+                // Append new buttons to existing board
+                val updatedButtonList = board.buttons + newButtons
+                
+                val updatedBoard = board.copy(buttons = updatedButtonList)
+                repository.saveBoard(updatedBoard)
+                
+                if (_uiState.value.currentBoard?.id == board.id) {
+                    _uiState.update { it.copy(currentBoard = updatedBoard) }
+                }
+                
+            } catch (e: Exception) {
+                android.util.Log.e("BoardViewModel", "Error expanding board", e)
+                e.printStackTrace()
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    suspend fun createMagicScene(name: String, image: android.graphics.Bitmap, imageUri: android.net.Uri): String {
+        val service = geminiService ?: throw IllegalStateException("Gemini Service not initialized")
+        _uiState.update { it.copy(isLoading = true) }
+        try {
+            android.util.Log.d("BoardViewModel", "Starting scene analysis for: $name")
+            
+            val objects = service.identifyMultipleItems(image)
+            android.util.Log.d("BoardViewModel", "Found ${objects.size} objects")
+            
+            if (objects.isEmpty()) {
+                android.util.Log.w("BoardViewModel", "No objects detected in scene")
+                return ""
+            }
+            
+            val newId = "scene_${java.util.UUID.randomUUID()}"
+            
+            // Save the full image permanently
+            val permanentFile = java.io.File(getApplication<android.app.Application>().filesDir, "scene_${newId}.jpg")
+            java.io.FileOutputStream(permanentFile).use { out ->
+                image.compress(android.graphics.Bitmap.CompressFormat.JPEG, 95, out)
+            }
+            val permanentUri = android.net.Uri.fromFile(permanentFile).toString()
+
+            val buttons = objects.mapIndexed { index, pair ->
+                val (label, coords) = pair
+                AacButton(
+                    id = "${newId}_btn_$index",
+                    label = label,
+                    speechText = null,
+                    backgroundColor = 0x00FFFFFF,
+                    action = ButtonAction.Speak(label),
+                    boundingBox = coords.toList()
+                )
+            }
+
+            val newBoard = Board(
+                id = newId, 
+                name = name, 
+                buttons = buttons, 
+                backgroundImagePath = permanentUri
+            )
+            repository.saveBoard(newBoard)
+            _uiState.update { it.copy(currentBoard = newBoard) }
+            return newId
+        } finally {
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    suspend fun createQuickBoard(name: String, images: List<android.graphics.Bitmap>): String = coroutineScope {
+        val service = geminiService ?: throw IllegalStateException("Gemini Service not initialized")
+        _uiState.update { it.copy(isLoading = true) }
+        try {
+            android.util.Log.d("BoardViewModel", "Starting multi-photo board creation for: $name")
+            
+            // Process all images and collect objects with frequency count
+            val objectFrequency = mutableMapOf<String, Int>()
+            
+            images.forEachIndexed { index, image ->
+                val objects = service.identifyMultipleItems(image)
+                objects.forEach { (label, _) ->
+                    val normalizedLabel = label.lowercase().trim()
+                    objectFrequency[normalizedLabel] = (objectFrequency[normalizedLabel] ?: 0) + 1
+                }
+            }
+            
+            if (objectFrequency.isEmpty()) {
+                android.util.Log.w("BoardViewModel", "No objects detected in any image")
+                return@coroutineScope ""
+            }
+            
+            // Sort by frequency and take top items
+            val maxItems = settingsRepository.settings.value.itemsToGenerate
+            val sortedObjects = objectFrequency.entries
+                .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+                .take(maxItems)
+                .map { it.key.replaceFirstChar { c -> if (c.isLowerCase()) c.titlecase() else c.toString() } }
+            
+            val newId = "quick_${java.util.UUID.randomUUID()}"
+            val langCode = settingsRepository.settings.value.languageCode
+            val arasaacLocale = if (langCode == "iw") "he" else "en"
+            
+            // Create buttons with symbols
+            val deferredButtons = sortedObjects.mapIndexed { index, label ->
+                async {
+                    var iconPath: String? = null
+                    try {
+                        val searchResults = arasaacService.searchPictograms(label, arasaacLocale)
+                        if (searchResults.isNotEmpty()) {
+                            iconPath = arasaacService.getImageUrl(searchResults[0]._id)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    
+                    AacButton(
+                        id = "${newId}_btn_$index",
+                        label = label,
+                        speechText = null,
+                        backgroundColor = 0xFFFFF9C4,
+                        action = ButtonAction.Speak(label),
+                        iconPath = iconPath
+                    )
+                }
+            }
+            
+            val buttons = deferredButtons.awaitAll().toMutableList()
+            
+            val newBoard = Board(
+                id = newId,
+                name = name,
+                buttons = buttons
+            )
+            repository.saveBoard(newBoard)
+            _uiState.update { it.copy(currentBoard = newBoard) }
+            return@coroutineScope newId
+        } finally {
+            _uiState.update { it.copy(isLoading = false) }
         }
     }
 
@@ -332,6 +540,10 @@ class BoardViewModel(
 
     suspend fun simplifyLocationName(rawName: String): String {
         return geminiService?.simplifyLocationName(rawName, settingsRepository.settings.value.languageCode) ?: rawName
+    }
+
+    suspend fun suggestBoardName(images: List<android.graphics.Bitmap>): String {
+        return geminiService?.suggestBoardName(images, settingsRepository.settings.value.languageCode) ?: ""
     }
 
     fun unlockCaregiverMode(pin: String): Boolean {
@@ -407,11 +619,18 @@ class BoardViewModel(
 
     fun updateButton(button: AacButton) {
         val current = _uiState.value.currentBoard ?: return
-        val updatedList = current.buttons.map { if (it.id == button.id) button else it }
-        val updatedBoard = current.copy(buttons = updatedList)
+        val buttons = current.buttons.toMutableList()
+        val index = buttons.indexOfFirst { it.id == button.id }
+        
+        if (index != -1) {
+            buttons[index] = button
+        } else {
+            buttons.add(button)
+        }
+        
+        val updatedBoard = current.copy(buttons = buttons)
         viewModelScope.launch {
             repository.saveBoard(updatedBoard)
-            // No strict need to update UI state manually if using Flow from Room, but currentBoard in state might be static
             _uiState.update { it.copy(currentBoard = updatedBoard) } 
         }
     }
@@ -421,6 +640,147 @@ class BoardViewModel(
         // Filter out the button with the given ID
         val updatedList = current.buttons.filterNot { it.id == buttonId }
         val updatedBoard = current.copy(buttons = updatedList)
+        viewModelScope.launch {
+            repository.saveBoard(updatedBoard)
+            _uiState.update { it.copy(currentBoard = updatedBoard) }
+        }
+    }
+
+    // ==================== Selection Management Functions ====================
+    
+    fun toggleButtonSelection(buttonId: String) {
+        _uiState.update { currentState ->
+            val newSelection = if (buttonId in currentState.selectedButtonIds) {
+                currentState.selectedButtonIds - buttonId
+            } else {
+                currentState.selectedButtonIds + buttonId
+            }
+            currentState.copy(selectedButtonIds = newSelection)
+        }
+    }
+
+    fun clearSelection() {
+        _uiState.update { it.copy(selectedButtonIds = emptySet()) }
+    }
+
+    fun deleteSelectedButtons() {
+        val current = _uiState.value.currentBoard ?: return
+        val selectedIds = _uiState.value.selectedButtonIds
+        
+        if (selectedIds.isEmpty()) return
+
+        viewModelScope.launch {
+            val updatedList = current.buttons.filterNot { it.id in selectedIds }
+            val updatedBoard = current.copy(buttons = updatedList)
+            repository.saveBoard(updatedBoard)
+            _uiState.update { 
+                it.copy(
+                    currentBoard = updatedBoard,
+                    selectedButtonIds = emptySet()
+                )
+            }
+        }
+    }
+
+    fun toggleHideSelectedButtons() {
+        val current = _uiState.value.currentBoard ?: return
+        val selectedIds = _uiState.value.selectedButtonIds
+        
+        if (selectedIds.isEmpty()) return
+
+        viewModelScope.launch {
+            val updatedList = current.buttons.map { button ->
+                if (button.id in selectedIds) {
+                    button.copy(hidden = !button.hidden)
+                } else {
+                    button
+                }
+            }
+            val updatedBoard = current.copy(buttons = updatedList)
+            repository.saveBoard(updatedBoard)
+            _uiState.update { 
+                it.copy(
+                    currentBoard = updatedBoard,
+                    selectedButtonIds = emptySet()
+                )
+            }
+        }
+    }
+
+    fun duplicateSelectedButtons() {
+        val current = _uiState.value.currentBoard ?: return
+        val selectedIds = _uiState.value.selectedButtonIds
+        
+        if (selectedIds.isEmpty()) return
+
+        viewModelScope.launch {
+            val selectedButtons = current.buttons.filter { it.id in selectedIds }
+            val newButtons = selectedButtons.map { original ->
+                original.copy(id = "${current.id}_btn_${java.util.UUID.randomUUID()}")
+            }
+            
+            val updatedList = current.buttons + newButtons
+            val updatedBoard = current.copy(buttons = updatedList)
+            repository.saveBoard(updatedBoard)
+            _uiState.update { 
+                it.copy(
+                    currentBoard = updatedBoard,
+                    selectedButtonIds = emptySet()
+                )
+            }
+        }
+    }
+
+    fun moveSelectedButtonsToBoard(targetBoardId: String) {
+        val current = _uiState.value.currentBoard ?: return
+        val selectedIds = _uiState.value.selectedButtonIds
+        
+        if (selectedIds.isEmpty() || current.id == targetBoardId) return
+
+        viewModelScope.launch {
+            val targetBoard = repository.getBoard(targetBoardId) ?: return@launch
+            val selectedButtons = current.buttons.filter { it.id in selectedIds }
+            
+            val updatedCurrentList = current.buttons.filterNot { it.id in selectedIds }
+            val updatedCurrentBoard = current.copy(buttons = updatedCurrentList)
+            
+            val movedButtons = selectedButtons.map { button ->
+                button.copy(id = "${targetBoardId}_btn_${java.util.UUID.randomUUID()}")
+            }
+            val updatedTargetList = targetBoard.buttons + movedButtons
+            val updatedTargetBoard = targetBoard.copy(buttons = updatedTargetList)
+            
+            repository.saveBoard(updatedCurrentBoard)
+            repository.saveBoard(updatedTargetBoard)
+            
+            _uiState.update { 
+                it.copy(
+                    currentBoard = updatedCurrentBoard,
+                    selectedButtonIds = emptySet()
+                )
+            }
+        }
+    }
+
+    fun reorderButtons(fromIndex: Int, toIndex: Int) {
+        val current = _uiState.value.currentBoard ?: return
+        
+        viewModelScope.launch {
+            val mutableList = current.buttons.toMutableList()
+            if (fromIndex in mutableList.indices && toIndex in mutableList.indices) {
+                val item = mutableList.removeAt(fromIndex)
+                mutableList.add(toIndex, item)
+                
+                val updatedBoard = current.copy(buttons = mutableList)
+                repository.saveBoard(updatedBoard)
+                _uiState.update { it.copy(currentBoard = updatedBoard) }
+            }
+        }
+    }
+
+    fun updateBoardButtons(newButtons: List<AacButton>) {
+        val current = _uiState.value.currentBoard ?: return
+        val updatedBoard = current.copy(buttons = newButtons)
         viewModelScope.launch {
             repository.saveBoard(updatedBoard)
             _uiState.update { it.copy(currentBoard = updatedBoard) }

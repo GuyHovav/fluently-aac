@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backspace
-import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,9 +45,17 @@ fun SentenceBar(
     onClear: () -> Unit,
     onBackspace: () -> Unit,
     onSpeak: (String) -> Unit,
+    languageCode: String = "en",
+    showSymbols: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val displayedText = sentence.joinToString(" ") { it.textToSpeak }
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    
+    val displayedText = remember(sentence, languageCode) {
+        val words = sentence.map { it.textToSpeak }
+        com.example.myaac.util.GrammarEngine.fixSentence(words, languageCode)
+    }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     var isExpanded by remember { mutableStateOf(false) }
 
@@ -62,6 +70,20 @@ fun SentenceBar(
     androidx.compose.runtime.LaunchedEffect(sentence.size) {
         if (sentence.isNotEmpty()) {
             listState.animateScrollToItem(sentence.size - 1)
+        }
+    }
+
+    // Trigger expanded view on tilt (landscape)
+    androidx.compose.runtime.LaunchedEffect(isLandscape, sentence.isNotEmpty()) {
+        if (isLandscape && sentence.isNotEmpty()) {
+            isExpanded = true
+        }
+    }
+
+    // Dismiss when returning to portrait
+    androidx.compose.runtime.LaunchedEffect(isLandscape) {
+        if (!isLandscape) {
+            isExpanded = false
         }
     }
 
@@ -111,63 +133,73 @@ fun SentenceBar(
                         modifier = Modifier.padding(start = 8.dp)
                     )
                 } else {
-                    androidx.compose.foundation.lazy.LazyRow(
-                        state = listState,
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        items(sentence.size) { index ->
-                            SentenceBarItem(
-                                button = sentence[index], 
-                                size = itemSize
-                            )
+                    if (showSymbols) {
+                        androidx.compose.foundation.lazy.LazyRow(
+                            state = listState,
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            items(sentence.size) { index ->
+                                SentenceBarItem(
+                                    button = sentence[index],
+                                    size = itemSize
+                                )
+                            }
                         }
+                    } else {
+                        Text(
+                            text = displayedText,
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp),
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
                     }
-                }
+            }
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
             // Actions
             Row(
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 IconButton(
                     onClick = onBackspace,
-                    enabled = sentence.isNotEmpty()
+                    enabled = sentence.isNotEmpty(),
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Backspace,
                         contentDescription = "Backspace",
+                        modifier = Modifier.size(22.dp),
                         tint = if (sentence.isNotEmpty()) MaterialTheme.colorScheme.onSurface else Color.LightGray
                     )
                 }
 
+
                 IconButton(
-                    onClick = { isExpanded = true },
-                    enabled = sentence.isNotEmpty()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Fullscreen,
-                        contentDescription = "Expand",
-                        tint = if (sentence.isNotEmpty()) MaterialTheme.colorScheme.onSurface else Color.LightGray
-                    )
-                }
-                
-                 IconButton(
                     onClick = { onSpeak(displayedText) },
-                     enabled = sentence.isNotEmpty(),
-                     modifier = Modifier
-                         .background(
-                             color = if (sentence.isNotEmpty()) MaterialTheme.colorScheme.primary else Color.LightGray,
-                             shape = RoundedCornerShape(12.dp)
-                         )
-                         .size(48.dp)
+                    enabled = sentence.isNotEmpty(),
+                    modifier = Modifier
+                        .background(
+                            color = if (sentence.isNotEmpty()) MaterialTheme.colorScheme.primary else Color.LightGray,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .size(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.VolumeUp,
                         contentDescription = "Speak",
+                        modifier = Modifier.size(24.dp),
                         tint = Color.White
                     )
                 }

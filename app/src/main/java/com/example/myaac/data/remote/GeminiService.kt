@@ -128,8 +128,7 @@ class GeminiService(private val apiKey: String) {
         }
     }
 
-    private fun scaleBitmap(bitmap: Bitmap): Bitmap {
-        val maxDimension = 1024
+    private fun scaleBitmap(bitmap: Bitmap, maxDimension: Int = 2048): Bitmap {
         val originalWidth = bitmap.width
         val originalHeight = bitmap.height
         var newWidth = originalWidth
@@ -148,12 +147,108 @@ class GeminiService(private val apiKey: String) {
         return bitmap
     }
 
+    suspend fun identifyMultipleItems(image: Bitmap): List<Pair<String, FloatArray>> {
+        return withContext(Dispatchers.IO) {
+            val prompt = """
+                You are analyzing a photo to create an AAC (Augmentative and Alternative Communication) board.
+                
+                Identify 8-12 of the MOST IMPORTANT and CLEARLY VISIBLE objects that a person would want to communicate about.
+                Focus on:
+                - Objects that are large and clearly visible
+                - Interactive items (things you can touch, use, or eat)
+                - Common household items, furniture, appliances, food, toys, people
+                - Objects that take up significant space in the image
+                
+                AVOID:
+                - Small or partially visible objects
+                - Background details
+                - Decorative items
+                - Ambiguous objects
+                
+                For EACH object, provide:
+                1. A simple, single-word label (e.g., "Refrigerator" not "White Refrigerator")
+                2. Accurate bounding box coordinates
+                
+                CRITICAL FORMAT - One object per line:
+                ObjectName | ymin, xmin, ymax, xmax
+                
+                Where coordinates are percentages (0-100):
+                - ymin: distance from TOP edge to object's TOP
+                - xmin: distance from LEFT edge to object's LEFT
+                - ymax: distance from TOP edge to object's BOTTOM
+                - xmax: distance from LEFT edge to object's RIGHT
+                
+                Example:
+                Refrigerator | 10, 5, 85, 45
+                Table | 60, 30, 95, 90
+                
+                Respond ONLY with the object list. No explanations.
+            """.trimIndent()
+            
+            // Use higher resolution for better recognition
+            val scaledBitmap = scaleBitmap(image, maxDimension = 2048)
+            
+            try {
+                val response = visionModel.generateContent(
+                    content {
+                        image(scaledBitmap)
+                        text(prompt)
+                    }
+                )
+                
+                val text = response.text?.trim() ?: return@withContext emptyList()
+                android.util.Log.d("GeminiDebug", "Multi-Object Response:\n$text")
+
+                val results = text.lines()
+                    .filter { it.isNotBlank() && it.contains("|") }
+                    .mapNotNull { line ->
+                        try {
+                            val parts = line.split("|")
+                            if (parts.size != 2) return@mapNotNull null
+                            
+                            val name = parts[0].trim()
+                            if (name.isEmpty()) return@mapNotNull null
+                            
+                            val coordsString = parts[1].trim()
+                            val cleanCoords = coordsString.replace("[", "").replace("]", "").replace(" ", "")
+                            val coords = cleanCoords.split(",")
+                                .mapNotNull { it.trim().toFloatOrNull() }
+                                .map { it / 100f }
+                                .toFloatArray()
+                            
+                            if (coords.size == 4 && 
+                                coords[0] >= 0f && coords[0] <= 1f &&
+                                coords[1] >= 0f && coords[1] <= 1f &&
+                                coords[2] >= 0f && coords[2] <= 1f &&
+                                coords[3] >= 0f && coords[3] <= 1f &&
+                                coords[2] > coords[0] && coords[3] > coords[1]) {
+                                name to coords
+                            } else {
+                                android.util.Log.w("GeminiDebug", "Invalid coords for $name: ${coords.joinToString()}")
+                                null
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("GeminiDebug", "Error parsing line: $line", e)
+                            null
+                        }
+                    }
+                
+                android.util.Log.d("GeminiDebug", "Successfully parsed ${results.size} objects")
+                results
+            } catch (e: Exception) {
+                android.util.Log.e("GeminiDebug", "Error in identifyMultipleItems", e)
+                e.printStackTrace()
+                emptyList()
+            }
+        }
+    }
+
     // predictNextButtons removed
-    suspend fun generateBoard(topic: String, languageCode: String = "en"): List<String> {
+    suspend fun generateBoard(topic: String, languageCode: String = "en", count: Int = 16): List<String> {
         return withContext(Dispatchers.IO) {
             val languageName = if (languageCode == "iw" || languageCode == "he") "Hebrew" else "English"
             val prompt = """
-                Create a list of 16 vocabulary words related to the topic '$topic' for an AAC communication board.
+                Create a list of $count vocabulary words related to the topic '$topic' for an AAC communication board.
                 Includes nouns, verbs, and adjectives.
                 Output the words in $languageName.
                 Return ONLY the words, separated by commas.
@@ -163,7 +258,30 @@ class GeminiService(private val apiKey: String) {
             try {
                 val response = textModel.generateContent(prompt)
                 val text = response.text?.trim() ?: return@withContext emptyList()
-                text.split(",").map { it.trim() }.filter { it.isNotBlank() }.take(16)
+                text.split(",").map { it.trim() }.filter { it.isNotBlank() }.take(count)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                emptyList()
+            }
+        }
+    }
+
+    suspend fun generateMoreItems(topic: String, existingItems: List<String>, count: Int, languageCode: String = "en"): List<String> {
+        return withContext(Dispatchers.IO) {
+            val languageName = if (languageCode == "iw" || languageCode == "he") "Hebrew" else "English"
+            val exclusions = existingItems.joinToString(", ")
+            val prompt = """
+                Create a list of $count NEW vocabulary words related to the topic '$topic' for an AAC communication board.
+                Includes nouns, verbs, and adjectives.
+                The words must be different from: $exclusions.
+                Output the words in $languageName.
+                Return ONLY the words, separated by commas.
+            """.trimIndent()
+            
+            try {
+                val response = textModel.generateContent(prompt)
+                val text = response.text?.trim() ?: return@withContext emptyList()
+                text.split(",").map { it.trim() }.filter { it.isNotBlank() }.take(count)
             } catch (e: Exception) {
                 e.printStackTrace()
                 emptyList()
@@ -192,6 +310,38 @@ class GeminiService(private val apiKey: String) {
             } catch (e: Exception) {
                 e.printStackTrace()
                 rawName // Fallback to original name
+            }
+        }
+    }
+
+    suspend fun suggestBoardName(images: List<Bitmap>, languageCode: String = "en"): String {
+        return withContext(Dispatchers.IO) {
+            val languageName = if (languageCode == "iw" || languageCode == "he") "Hebrew" else "English"
+            val prompt = """
+                Analyze these images and provide a single, short, descriptive title for a communication board that handles these items.
+                The title should be 1-3 words maximum.
+                Output the title in $languageName.
+                Examples: "Breakfast", "Toys", "Kitchen Items", "My Room".
+                
+                Return ONLY the title. No punctuation.
+            """.trimIndent()
+            
+            // Limit to first 3 images to save bandwidth/token usage if many are selected, 
+            // but for "Quick Board" typically user selects a few.
+            // Let's take up to 4 images.
+            val imagesToProcess = images.take(4).map { scaleBitmap(it) }
+
+            try {
+                val response = visionModel.generateContent(
+                    content {
+                        imagesToProcess.forEach { image(it) }
+                        text(prompt)
+                    }
+                )
+                response.text?.trim() ?: ""
+            } catch (e: Exception) {
+                e.printStackTrace()
+                ""
             }
         }
     }

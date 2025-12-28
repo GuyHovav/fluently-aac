@@ -10,5 +10,6 @@ data class Board(
     val rows: Int = 4,
     val columns: Int = 4,
     val buttons: List<AacButton> = emptyList(),
-    val iconPath: String? = null
+    val iconPath: String? = null,
+    val backgroundImagePath: String? = null
 )

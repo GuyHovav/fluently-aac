@@ -48,6 +48,7 @@ fun MyAACTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
+    fontFamily: String = "System",
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -67,9 +68,12 @@ fun MyAACTheme(
         }
     }
 
+    val resolvedFontFamily = getFontFamily(fontFamily)
+    val typography = getTypography(resolvedFontFamily)
+
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = typography,
         content = content
     )
 }

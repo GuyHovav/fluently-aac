@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,13 +34,16 @@ import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.example.myaac.model.AacButton
 import com.example.myaac.model.ButtonAction
+import com.example.myaac.model.Board
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun EditButtonDialog(
     button: AacButton,
+    allBoards: List<Board>,
     defaultLanguage: String = "en",
     onDismiss: () -> Unit,
     onSave: (AacButton) -> Unit,
@@ -49,16 +53,16 @@ fun EditButtonDialog(
     onDelete: () -> Unit
 ) {
     var label by remember { mutableStateOf(button.label) }
-    var topic by remember { mutableStateOf(button.topic ?: "") }
-    var isTopicEnabled by remember { mutableStateOf(button.topic != null) }
     var speechText by remember { mutableStateOf(button.speechText ?: "") }
     var selectedColor by remember { mutableStateOf(button.backgroundColor) }
+    var isHidden by remember { mutableStateOf(button.hidden) }
     var imageUri by remember { mutableStateOf<Uri?>(button.iconPath?.let { Uri.parse(it) }) }
     var isAnalyzing by remember { mutableStateOf(false) }
     var showSymbolSearch by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var proposedSymbolUrl by remember { mutableStateOf<String?>(null) }
     var showSymbolProposalDialog by remember { mutableStateOf(false) }
+    var showCamera by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -90,21 +94,28 @@ fun EditButtonDialog(
         }
     }
 
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
-        if (bitmap != null) {
-            // Save bitmap to temp file to get URI for display/storage
-            val file = File(context.cacheDir, "temp_cam_${System.currentTimeMillis()}.png")
-            FileOutputStream(file).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-            }
-            imageUri = Uri.fromFile(file)
-            showAutoNameDialog = true
-        }
-    }
-
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
         if (isGranted) {
-            cameraLauncher.launch(null)
+            showCamera = true
+        }
+    }
+    
+    if (showCamera) {
+        Dialog(onDismissRequest = { showCamera = false }) {
+           CameraScreen(
+                onImageCaptured = { bitmap ->
+                    // Save bitmap to temp file to get URI for display/storage
+                    val file = File(context.cacheDir, "temp_cam_${System.currentTimeMillis()}.png")
+                    FileOutputStream(file).use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    }
+                    imageUri = Uri.fromFile(file)
+                    showCamera = false
+                    showAutoNameDialog = true
+                },
+                onError = { /* Handle error */ },
+                onClose = { showCamera = false }
+            )
         }
     }
     
@@ -193,7 +204,9 @@ fun EditButtonDialog(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(androidx.compose.foundation.rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -234,7 +247,7 @@ fun EditButtonDialog(
                      }
                      Button(onClick = { 
                          if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                            cameraLauncher.launch(null)
+                            showCamera = true
                          } else {
                             permissionLauncher.launch(android.Manifest.permission.CAMERA)
                          }
@@ -283,45 +296,35 @@ fun EditButtonDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
                     label = { Text("Label") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onDone = { keyboardController?.hide() }
+                    )
                 )
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Topic Toggle
+                // Visibility Toggle
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Topic", style = MaterialTheme.typography.bodyLarge)
+                    Text("Hidden", style = MaterialTheme.typography.bodyLarge)
                     Switch(
-                        checked = isTopicEnabled,
-                        onCheckedChange = { enabled ->
-                            isTopicEnabled = enabled
-                            if (enabled && topic.isBlank()) {
-                                topic = label
-                            }
-                        }
+                        checked = isHidden,
+                        onCheckedChange = { isHidden = it }
                     )
                 }
 
-                if (isTopicEnabled) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = topic,
-                        onValueChange = { topic = it },
-                        label = { Text("Topic") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 // Color Picker
@@ -342,6 +345,56 @@ fun EditButtonDialog(
                                 )
                                 .clickable { selectedColor = colorVal }
                         )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Action Selection
+                var isLinkAction by remember { mutableStateOf(button.action is ButtonAction.LinkToBoard) }
+                var selectedLinkBoardId by remember { 
+                    mutableStateOf((button.action as? ButtonAction.LinkToBoard)?.boardId ?: allBoards.firstOrNull()?.id ?: "") 
+                }
+                var isBoardDropdownExpanded by remember { mutableStateOf(false) }
+
+                Text("Action", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.align(Alignment.Start))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = !isLinkAction, onClick = { isLinkAction = false })
+                    Text("Speak Text", modifier = Modifier.clickable { isLinkAction = false })
+                    Spacer(modifier = Modifier.width(16.dp))
+                    RadioButton(selected = isLinkAction, onClick = { isLinkAction = true })
+                    Text("Link to Board", modifier = Modifier.clickable { isLinkAction = true })
+                }
+
+                if (isLinkAction) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ExposedDropdownMenuBox(
+                        expanded = isBoardDropdownExpanded,
+                        onExpandedChange = { isBoardDropdownExpanded = !isBoardDropdownExpanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = allBoards.find { it.id == selectedLinkBoardId }?.name ?: "Select Board",
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isBoardDropdownExpanded) },
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = isBoardDropdownExpanded,
+                            onDismissRequest = { isBoardDropdownExpanded = false }
+                        ) {
+                            allBoards.forEach { board ->
+                                DropdownMenuItem(
+                                    text = { Text(board.name) },
+                                    onClick = {
+                                        selectedLinkBoardId = board.id
+                                        isBoardDropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -375,12 +428,13 @@ fun EditButtonDialog(
                                      speechText = speechText.ifBlank { null },
                                      backgroundColor = selectedColor,
                                      iconPath = imageUri?.toString(),
-                                     action = if (button.action is ButtonAction.Speak) {
-                                          ButtonAction.Speak(speechText.ifBlank { label })
+                                     hidden = isHidden,
+                                     action = if (isLinkAction) {
+                                         ButtonAction.LinkToBoard(selectedLinkBoardId)
                                      } else {
-                                         button.action
+                                         ButtonAction.Speak(speechText.ifBlank { label })
                                      },
-                                     topic = if (isTopicEnabled) topic.ifBlank { null } else null
+                                     topic = null // Removed topic support
                                  )
                              )
                          }) {
@@ -399,7 +453,9 @@ fun EditButtonDialog(
             onDismiss = { showSymbolSearch = false },
             onSymbolSelected = { url, symbolLabel ->
                 imageUri = Uri.parse(url)
-                label = symbolLabel.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }
+                if (label.isBlank()) {
+                    label = symbolLabel.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }
+                }
                 showSymbolSearch = false
             }
         )

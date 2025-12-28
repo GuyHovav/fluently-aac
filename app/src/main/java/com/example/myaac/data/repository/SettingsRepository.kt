@@ -11,7 +11,12 @@ data class AppSettings(
     val textScale: Float = 1.0f,
     val ttsRate: Float = 1.0f,
     val disabilityType: com.example.myaac.data.model.DisabilityType = com.example.myaac.data.model.DisabilityType.NONE,
-    val locationSuggestionsEnabled: Boolean = true
+    val locationSuggestionsEnabled: Boolean = true,
+    val showHorizontalNavigation: Boolean = false,
+    val showSymbolsInSentenceBar: Boolean = false,
+    val itemsToGenerate: Int = 20,
+    val maxBoardCapacity: Int = 500,
+    val fontFamily: String = "System"
 )
 
 class SettingsRepository(context: Context) {
@@ -29,12 +34,22 @@ class SettingsRepository(context: Context) {
             com.example.myaac.data.model.DisabilityType.NONE
         }
 
+        // Backward compatibility: if old maxBoardItems exists, use it for both new settings
+        val legacyMaxItems = preferences.getInt("max_board_items", -1)
+        val defaultGenerate = if (legacyMaxItems != -1) legacyMaxItems else 20
+        val defaultCapacity = if (legacyMaxItems != -1) (legacyMaxItems * 5).coerceAtMost(500) else 500
+
         return AppSettings(
             languageCode = preferences.getString(KEY_LANGUAGE, "en") ?: "en",
             textScale = preferences.getFloat(KEY_TEXT_SCALE, 1.0f),
             ttsRate = preferences.getFloat(KEY_TTS_RATE, 1.0f),
             disabilityType = disabilityType,
-            locationSuggestionsEnabled = preferences.getBoolean(KEY_LOCATION_SUGGESTIONS, true)
+            locationSuggestionsEnabled = preferences.getBoolean(KEY_LOCATION_SUGGESTIONS, true),
+            showHorizontalNavigation = preferences.getBoolean(KEY_HORIZONTAL_NAVIGATION, false),
+            showSymbolsInSentenceBar = preferences.getBoolean(KEY_SHOW_SYMBOLS_IN_SENTENCE, false),
+            itemsToGenerate = preferences.getInt(KEY_ITEMS_TO_GENERATE, defaultGenerate).coerceIn(1, 50),
+            maxBoardCapacity = preferences.getInt(KEY_MAX_BOARD_CAPACITY, defaultCapacity).coerceIn(50, 1000),
+            fontFamily = preferences.getString(KEY_FONT_FAMILY, "System") ?: "System"
         )
     }
     
@@ -47,6 +62,11 @@ class SettingsRepository(context: Context) {
         preferences.edit().putFloat(KEY_TEXT_SCALE, scale).apply()
         _settings.value = _settings.value.copy(textScale = scale)
     }
+
+    fun setFontFamily(family: String) {
+        preferences.edit().putString(KEY_FONT_FAMILY, family).apply()
+        _settings.value = _settings.value.copy(fontFamily = family)
+    }
     
     fun setTtsRate(rate: Float) {
         preferences.edit().putFloat(KEY_TTS_RATE, rate).apply()
@@ -56,6 +76,28 @@ class SettingsRepository(context: Context) {
     fun setLocationSuggestionsEnabled(enabled: Boolean) {
         preferences.edit().putBoolean(KEY_LOCATION_SUGGESTIONS, enabled).apply()
         _settings.value = _settings.value.copy(locationSuggestionsEnabled = enabled)
+    }
+
+    fun setHorizontalNavigationEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_HORIZONTAL_NAVIGATION, enabled).apply()
+        _settings.value = _settings.value.copy(showHorizontalNavigation = enabled)
+    }
+
+    fun setShowSymbolsInSentenceBar(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_SHOW_SYMBOLS_IN_SENTENCE, enabled).apply()
+        _settings.value = _settings.value.copy(showSymbolsInSentenceBar = enabled)
+    }
+
+    fun setItemsToGenerate(count: Int) {
+        val validCount = count.coerceIn(1, 50)
+        preferences.edit().putInt(KEY_ITEMS_TO_GENERATE, validCount).apply()
+        _settings.value = _settings.value.copy(itemsToGenerate = validCount)
+    }
+
+    fun setMaxBoardCapacity(count: Int) {
+        val validCount = count.coerceIn(50, 1000)
+        preferences.edit().putInt(KEY_MAX_BOARD_CAPACITY, validCount).apply()
+        _settings.value = _settings.value.copy(maxBoardCapacity = validCount)
     }
 
     fun setDisabilityType(type: com.example.myaac.data.model.DisabilityType) {
@@ -84,5 +126,10 @@ class SettingsRepository(context: Context) {
         private const val KEY_TTS_RATE = "tts_rate"
         private const val KEY_DISABILITY_TYPE = "disability_type"
         private const val KEY_LOCATION_SUGGESTIONS = "location_suggestions_enabled"
+        private const val KEY_HORIZONTAL_NAVIGATION = "horizontal_navigation_enabled"
+        private const val KEY_SHOW_SYMBOLS_IN_SENTENCE = "show_symbols_in_sentence"
+        private const val KEY_ITEMS_TO_GENERATE = "items_to_generate"
+        private const val KEY_MAX_BOARD_CAPACITY = "max_board_capacity"
+        private const val KEY_FONT_FAMILY = "font_family"
     }
 }

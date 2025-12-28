@@ -62,9 +62,17 @@
     <string name="location_detected_title">Location Detected</string>
     <string name="location_detected_message">It looks like you are at \'%1$s\'. Would you like to create a new board for this place?</string>
     <string name="yes_create_board">Yes, Create Board</string>
-    <string name="no_thanks">No Thanks</string>
+
     <string name="location_suggestions">Location Suggestions</string>
     <string name="enable_location_suggestions">Enable Location Suggestions</string>
+    <string name="board_navigation">Board Navigation</string>
+    <string name="enable_horizontal_board_navigation">Enable Horizontal Board Navigation</string>
+    <string name="sentence_bar_display">Sentence Field Display</string>
+    <string name="show_symbols_in_sentence_bar">Show Symbols in Sentence Field</string>
+    <string name="items_to_generate">Items to Auto-Generate</string>
+    <string name="items_to_generate_description">Default number of items to generate with AI</string>
+    <string name="max_board_capacity">Max Board Capacity</string>
+    <string name="max_board_capacity_description">Maximum items allowed per board</string>
 
     <!-- General UI -->
     <string name="save">Save</string>
@@ -115,4 +123,39 @@
     <string name="spoken_help">Help me please</string>
     <string name="spoken_bathroom">I need to use the bathroom</string>
     <string name="spoken_play">I want to play</string>
+    <string name="grammar_fix">Fix Grammar</string>
+    <string name="loading_populating_board">Please wait while board is being populated</string>
+    <string name="new_visual_scene">✨ New Visual Scene</string>
+    <string name="visual_scene_desc">Take a photo to turn it into an interactive board</string>
+    <string name="quick_board_from_photo">⚡ Quick Board from Photo</string>
+    <string name="quick_board_desc">AI will identify objects and create a standard grid board</string>
+    <string name="multi_photo_desc">Take 3-5 photos from different angles for complete vocabulary</string>
+    <string name="btn_add_photo">Add Photo</string>
+    <string name="btn_add_another">Add Another</string>
+    <string name="scene_name">Scene Name</string>
+    <string name="btn_take_photo">Take Photo</string>
+    <string name="btn_select_gallery">Select Gallery</string>
+    <string name="expand_board">✨ Generate More Items</string>
+    <string name="expanding_board_message">Generating new items...</string>
+    <string name="generate_items_dialog_title">Generate Items</string>
+    <string name="generate_items_dialog_message">How many items would you like to generate?</string>
+    <string name="generate">Generate</string>
+    <string name="empty_board_prompt">Board is empty. Press to add items</string>
+    <string name="duplicate_board_name_title">Board Name Already Exists</string>
+    <string name="duplicate_board_name_message">A board with the name \'%1$s\' already exists. Would you like to open it or choose a different name?</string>
+    <string name="open_existing_board">Open Existing Board</string>
+    <string name="choose_different_name">Choose Different Name</string>
+    <string name="board_name_error">A board with this name already exists</string>
+    
+    <!-- Link to Board Strings -->
+    <string name="action_type">Action</string>
+    <string name="action_speak">Speak Text</string>
+    <string name="action_link">Link to Board</string>
+    <string name="select_board">Select Board</string>
+    <string name="create_link_title">Create Link?</string>
+    <string name="create_link_message">Board created successfully! Would you like to create a link to this board on another board?</string>
+    <string name="yes_on_home">Yes, on Home Board</string>
+    <string name="select_target_board">Select Target Board...</string>
+    <string name="no_thanks">No, Thanks</string>
+    <string name="link_to_board_label">Link to: %1$s</string>
 </resources>

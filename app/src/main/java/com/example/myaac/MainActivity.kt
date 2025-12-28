@@ -7,6 +7,7 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -47,6 +48,7 @@ import com.example.myaac.ui.components.SentenceBar
 import com.example.myaac.ui.theme.MyAACTheme
 import com.example.myaac.viewmodel.BoardViewModel
 import com.example.myaac.ui.SettingsScreen
+import com.example.myaac.ui.PronunciationManagementScreen
 import com.example.myaac.data.repository.AppSettings
 import java.util.Locale
 
@@ -77,45 +79,76 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         tts = TextToSpeech(this, this)
 
         setContent {
-            MyAACTheme {
                 val settings by settingsRepository.settings.collectAsState()
-                var showSettings by remember { mutableStateOf(false) }
+                MyAACTheme(
+                    fontFamily = settings.fontFamily
+                ) {
+                    var showSettings by remember { mutableStateOf(false) }
+                var showPronunciationManagement by remember { mutableStateOf(false) }
                 
-                if (showSettings) {
-                    SettingsScreen(
-                        settings = settings,
-                        onLanguageChange = { code ->
-                            settingsRepository.setLanguage(code)
-                            // Update TTS language
-                            val locale = when (code) {
-                                "iw" -> Locale("iw", "IL")
-                                else -> Locale.US
-                            }
-                            tts?.language = locale
-                            // Recreate activity to apply new language
-                            recreate()
-                        },
-                        onTextScaleChange = { scale ->
-                            settingsRepository.setTextScale(scale)
-                        },
-                        onTtsRateChange = { rate ->
-                            settingsRepository.setTtsRate(rate)
-                        },
-                        onLocationSuggestionsChange = { enabled ->
-                            settingsRepository.setLocationSuggestionsEnabled(enabled)
-                        },
-                        onDisabilityTypeChange = { type ->
-                            settingsRepository.setDisabilityType(type)
-                        },
-                        onBack = { showSettings = false }
-                    )
-                } else {
-                    MainScreen(
-                        onSpeak = { text -> speak(text, settings.ttsRate) },
-                        onOpenSettings = { showSettings = true },
-                        textScale = settings.textScale,
-                        languageCode = settings.languageCode
-                    )
+                when {
+                    showPronunciationManagement -> {
+                        PronunciationManagementScreen(
+                            onBack = { showPronunciationManagement = false }
+                        )
+                    }
+                    showSettings -> {
+                        SettingsScreen(
+                            settings = settings,
+                            onLanguageChange = { code ->
+                                settingsRepository.setLanguage(code)
+                                // Update TTS language
+                                val locale = when (code) {
+                                    "iw" -> Locale("iw", "IL")
+                                    else -> Locale.US
+                                }
+                                tts?.language = locale
+                                // Recreate activity to apply new language
+                                recreate()
+                            },
+                            onTextScaleChange = { scale ->
+                                settingsRepository.setTextScale(scale)
+                            },
+                            onTtsRateChange = { rate ->
+                                settingsRepository.setTtsRate(rate)
+                            },
+                            onLocationSuggestionsChange = { enabled ->
+                                settingsRepository.setLocationSuggestionsEnabled(enabled)
+                            },
+                            onHorizontalNavigationChange = { enabled ->
+                                settingsRepository.setHorizontalNavigationEnabled(enabled)
+                            },
+                            onDisabilityTypeChange = { type ->
+                                settingsRepository.setDisabilityType(type)
+                            },
+                            onShowSymbolsInSentenceChange = { enabled ->
+                                settingsRepository.setShowSymbolsInSentenceBar(enabled)
+                            },
+                            onItemsToGenerateChange = { count ->
+                                settingsRepository.setItemsToGenerate(count)
+                            },
+                            onMaxBoardCapacityChange = { count ->
+                                settingsRepository.setMaxBoardCapacity(count)
+                            },
+                            onFontFamilyChange = { family ->
+                                settingsRepository.setFontFamily(family)
+                            },
+                            onManagePronunciations = {
+                                showPronunciationManagement = true
+                            },
+                            onBack = { showSettings = false }
+                        )
+                    }
+                    else -> {
+                        MainScreen(
+                            onSpeak = { text -> speak(text, settings.ttsRate) },
+                            onOpenSettings = { showSettings = true },
+                            textScale = settings.textScale,
+                            languageCode = settings.languageCode,
+                            showHorizontalNavigation = settings.showHorizontalNavigation,
+                            showSymbolsInSentenceBar = settings.showSymbolsInSentenceBar
+                        )
+                    }
                 }
             }
         }
@@ -138,13 +171,11 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun speak(text: String, rate: Float = 1.0f) {
-        var textToSpeak = text
         val languageCode = settingsRepository.settings.value.languageCode
-        if (languageCode == "iw" || languageCode == "he") {
-            // Apply Hebrew corrections
-            // רעב -> רָעֵב (hungry vs hunger)
-            textToSpeak = textToSpeak.replace(Regex("(?<!\\p{L})רעב(?!\\p{L})"), "רָעֵב")
-        }
+        val app = application as MyAacApplication
+        
+        // Apply pronunciation corrections using the dictionary
+        val textToSpeak = app.pronunciationRepository.dictionary.applyCorrections(text, languageCode)
 
         tts?.setSpeechRate(rate)
         tts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, "")
@@ -166,7 +197,9 @@ fun MainScreen(
     onSpeak: (String) -> Unit,
     onOpenSettings: () -> Unit,
     textScale: Float,
-    languageCode: String = "en"
+    languageCode: String = "en",
+    showHorizontalNavigation: Boolean = false,
+    showSymbolsInSentenceBar: Boolean = true
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val allBoards by viewModel.allBoards.collectAsState(initial = emptyList())
@@ -181,11 +214,104 @@ fun MainScreen(
     // Retrieve Gemini Service from Application
     val app = context.applicationContext as com.example.myaac.MyAacApplication
     val geminiService = app.geminiService
+    val morphologyService = app.morphologyService
+    
+    // Grammar State
+    var grammarVariations by remember { mutableStateOf<List<String>?>(null) }
+    var grammarBaseWord by remember { mutableStateOf("") }
 
     // Location Suggestion Logic
     var showLocationDialog by remember { mutableStateOf(false) }
     var suggestedBoardName by remember { mutableStateOf("") }
     var isCheckingLocation by remember { mutableStateOf(false) }
+
+    // Link Creation Logic
+    var createdBoardIdForLink by remember { mutableStateOf<String?>(null) }
+    var showLinkTargetPicker by remember { mutableStateOf(false) }
+
+    // Dialog for "Create Link?"
+    if (createdBoardIdForLink != null && !showLinkTargetPicker) {
+        val newBoardName = allBoards.find { it.id == createdBoardIdForLink }?.name ?: "New Board"
+        AlertDialog(
+            onDismissRequest = { createdBoardIdForLink = null },
+            title = { Text(stringResource(R.string.create_link_title)) },
+            text = { Text(stringResource(R.string.create_link_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val linkButton = com.example.myaac.model.AacButton(
+                        id = "link_${java.util.UUID.randomUUID()}",
+                        label = newBoardName,
+                        speechText = null,
+                        action = ButtonAction.LinkToBoard(createdBoardIdForLink!!),
+                        backgroundColor = 0xFFFFE0B2 // Orange-ish for folders/links
+                    )
+                    scope.launch {
+                        viewModel.addButtonToBoard("home", linkButton)
+                        createdBoardIdForLink = null
+                    }
+                }) {
+                    Text(stringResource(R.string.yes_on_home))
+                }
+            },
+            dismissButton = {
+                Row {
+                     TextButton(onClick = { showLinkTargetPicker = true }) {
+                        Text(stringResource(R.string.select_target_board)) // "Select..."
+                    }
+                    TextButton(onClick = { createdBoardIdForLink = null }) {
+                        Text(stringResource(R.string.no_thanks))
+                    }
+                }
+            }
+        )
+    }
+
+    // Picker for "Select Target Board"
+    if (showLinkTargetPicker && createdBoardIdForLink != null) {
+        val newBoardName = allBoards.find { it.id == createdBoardIdForLink }?.name ?: "New Board"
+        AlertDialog(
+            onDismissRequest = { 
+                showLinkTargetPicker = false
+                createdBoardIdForLink = null 
+            },
+            title = { Text(stringResource(R.string.select_target_board)) },
+            text = {
+                // Simple list of boards
+                androidx.compose.foundation.lazy.LazyColumn(
+                    modifier = Modifier.height(300.dp)
+                ) {
+                    items(allBoards.filter { it.id != createdBoardIdForLink }) { board ->
+                        ListItem(
+                            headlineContent = { Text(board.name) },
+                            leadingContent = { Icon(Icons.Default.Folder, contentDescription = null) },
+                            modifier = Modifier.clickable {
+                                val linkButton = com.example.myaac.model.AacButton(
+                                    id = "link_${java.util.UUID.randomUUID()}",
+                                    label = newBoardName,
+                                    speechText = null,
+                                    action = ButtonAction.LinkToBoard(createdBoardIdForLink!!),
+                                    backgroundColor = 0xFFFFE0B2
+                                )
+                                scope.launch {
+                                    viewModel.addButtonToBoard(board.id, linkButton)
+                                    showLinkTargetPicker = false
+                                    createdBoardIdForLink = null
+                                }
+                            }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { 
+                    showLinkTargetPicker = false
+                    createdBoardIdForLink = null 
+                }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 
     // Effect to check location once on startup (or periodically if desired, but ONCE is safer for now)
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -271,7 +397,9 @@ fun MainScreen(
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = {
                     showLocationDialog = false
-                    viewModel.createMagicBoard(suggestedBoardName, suggestedBoardName)
+                    scope.launch {
+                        viewModel.createMagicBoard(suggestedBoardName, suggestedBoardName)
+                    }
                 }) {
                     Text(stringResource(R.string.yes_create_board))
                 }
@@ -288,6 +416,7 @@ fun MainScreen(
         // ... (Edit Dialog Code remains same)
          com.example.myaac.ui.components.EditButtonDialog(
             button = buttonToEdit!!,
+            allBoards = allBoards,
             defaultLanguage = languageCode,
             onDismiss = { buttonToEdit = null },
             onSave = { updatedButton ->
@@ -328,12 +457,16 @@ fun MainScreen(
                     scope.launch { drawerState.close() }
                 },
                 onCreateBoard = { name, topic ->
-                    if (topic.isNotBlank()) {
-                         viewModel.createMagicBoard(name, topic)
-                    } else {
-                         viewModel.createNewBoard(name)
+                    scope.launch {
+                        val newId = if (topic.isNotBlank()) {
+                             viewModel.createMagicBoard(name, topic)
+                        } else {
+                             viewModel.createNewBoard(name)
+                        }
+                        drawerState.close()
+                        // Trigger link prompt
+                        createdBoardIdForLink = newId
                     }
-                    scope.launch { drawerState.close() }
                 },
                 onDeleteBoard = { board ->
                     viewModel.deleteBoard(board.id)
@@ -341,11 +474,36 @@ fun MainScreen(
                 onUpdateBoard = { board ->
                     viewModel.updateBoard(board)
                 },
+                onExpandBoard = { board, itemCount ->
+                     viewModel.expandBoard(board, itemCount)
+                     scope.launch { drawerState.close() }
+                },
                 onUnlock = { pin -> viewModel.unlockCaregiverMode(pin) },
                 onLock = { viewModel.lockCaregiverMode() },
                 onOpenSettings = { 
                     scope.launch { drawerState.close() }
                     onOpenSettings()
+                },
+                onCreateVisualScene = { name, bitmap, uri ->
+                    scope.launch {
+                        val newId = viewModel.createMagicScene(name, bitmap, uri)
+                        drawerState.close()
+                        if (newId.isNotEmpty()) {
+                             createdBoardIdForLink = newId
+                        }
+                    }
+                },
+                onCreateQuickBoard = { name, bitmaps ->
+                    scope.launch {
+                        val newId = viewModel.createQuickBoard(name, bitmaps)
+                        drawerState.close()
+                        if (newId.isNotEmpty()) {
+                             createdBoardIdForLink = newId
+                        }
+                    }
+                },
+                onSuggestBoardName = { bitmaps ->
+                    viewModel.suggestBoardName(bitmaps)
                 }
             )
         }
@@ -372,12 +530,23 @@ fun MainScreen(
                     .padding(innerPadding)
             ) {
                 if (uiState.isLoading) {
-                    androidx.compose.material3.LinearProgressIndicator(
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            text = stringResource(R.string.loading_populating_board),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
                 // Board Navigation Row
-                if (allBoards.size > 1) { // Only show if we have other boards to navigate to (home + at least one other)
+                if (showHorizontalNavigation && allBoards.size > 1) { // Only show if enabled and we have other boards
                      androidx.compose.foundation.lazy.LazyRow(
                          modifier = Modifier
                              .fillMaxWidth()
@@ -423,42 +592,159 @@ fun MainScreen(
                      }
                 }
 
-                // Sentence Bar
-                SentenceBar(
-                    sentence = uiState.sentence,
-                    onClear = { viewModel.clearSentence() },
-                    onBackspace = { viewModel.onButtonPress(com.example.myaac.model.AacButton(
-                        id = "bksp", label = "Backspace", speechText = null, action = ButtonAction.DeleteLastWord
-                    ))}, 
-                    onSpeak = { text -> onSpeak(text) }
-                )
+                // Sentence Bar (only show in user mode, not in caregiver mode)
+                if (!uiState.isCaregiverMode) {
+                    SentenceBar(
+                        sentence = uiState.sentence,
+                        onClear = { viewModel.clearSentence() },
+                        onBackspace = { viewModel.onButtonPress(com.example.myaac.model.AacButton(
+                            id = "bksp", label = "Backspace", speechText = null, action = ButtonAction.DeleteLastWord
+                        ))}, 
+                        onSpeak = { text -> onSpeak(text) },
+                        languageCode = languageCode,
+                        showSymbols = showSymbolsInSentenceBar
+                    )
+                }
 
                 // Smart Strip (AI Predictions) - REMOVED
 
-                // Grid
-                if (uiState.currentBoard != null) {
-                    CommunicationGrid(
-                        buttons = uiState.currentBoard!!.buttons,
-                        columns = uiState.currentBoard!!.columns,
-                        onButtonClick = { button ->
-                            if (uiState.isCaregiverMode) {
-                                buttonToEdit = button
-                            } else {
-                                viewModel.onButtonPress(button)
-                                if (button.action is ButtonAction.Speak) {
-                                    onSpeak(button.textToSpeak)
+                // Grid with overlaid SelectionBar
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier.weight(1f).fillMaxSize()
+                ) {
+                    // Grid
+                    if (uiState.currentBoard != null) {
+                        if (!uiState.currentBoard!!.backgroundImagePath.isNullOrEmpty()) {
+                            com.example.myaac.ui.components.VisualSceneGrid(
+                                board = uiState.currentBoard!!,
+                                isCaregiverMode = uiState.isCaregiverMode,
+                                onButtonClick = { button ->
+                                    if (uiState.isCaregiverMode) {
+                                        buttonToEdit = button
+                                    } else {
+                                        viewModel.onButtonPress(button)
+                                        if (button.action is ButtonAction.Speak) {
+                                            onSpeak(button.textToSpeak)
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+
+                            CommunicationGrid(
+                                buttons = uiState.currentBoard!!.buttons,
+                                columns = uiState.currentBoard!!.columns,
+                                isCaregiverMode = uiState.isCaregiverMode,
+                                selectedButtonIds = uiState.selectedButtonIds,
+                                onButtonClick = { button ->
+                                    if (uiState.isCaregiverMode) {
+                                        // In selection mode, clicking toggles selection
+                                        if (uiState.selectedButtonIds.isNotEmpty()) {
+                                            viewModel.toggleButtonSelection(button.id)
+                                        } else {
+                                            // No items selected, open edit dialog
+                                            buttonToEdit = button
+                                        }
+                                    } else {
+                                        viewModel.onButtonPress(button)
+                                        if (button.action is ButtonAction.Speak) {
+                                            onSpeak(button.textToSpeak)
+                                        }
+                                    }
+                                },
+                                onButtonLongPress = if (uiState.isCaregiverMode) {
+                                    { button -> viewModel.toggleButtonSelection(button.id) }
+                                } else null,
+                                onGrammarRequest = { button ->
+                                    scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                        val word = button.textToSpeak
+                                        // Try Verb and Noun forms and combining them
+                                        val verbs = morphologyService.getVariations(word, "VERB")
+                                        val nouns = morphologyService.getVariations(word, "NOUN")
+                                        val adjectives = morphologyService.getVariations(word, "ADJECTIVE")
+                                        
+                                        val combined = (verbs + nouns + adjectives).distinct()
+                                        
+                                        // Filter out trivial cases where variation is just the word itself (if only 1 result)
+                                        // But if it's just the word, we might still show it to confirm? 
+                                        // Avaz shows popup even if empty-ish? No, if empty it shouldn't show.
+                                        if (combined.isNotEmpty() && combined != listOf(word)) {
+                                            with(androidx.compose.ui.platform.AndroidUiDispatcher.Main) { // Go back in UI thread
+                                                grammarBaseWord = word
+                                                grammarVariations = combined
+                                            }
+                                        } else {
+                                             // Fallback: If no variations found, maybe speak or do nothing?
+                                             // For now do nothing.
+                                        }
+                                    }
+                                },
+                                onReorderFinished = if (uiState.isCaregiverMode) {
+                                    { newButtons ->
+                                        viewModel.updateBoardButtons(newButtons)
+                                    }
+                                } else null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(top = if (uiState.isCaregiverMode) 72.dp else 0.dp)
+                            )
+                        }
+                    } else {
+                        // Loading STATE
+                        androidx.compose.foundation.layout.Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = androidx.compose.ui.Alignment.Center
+                        ) {
+                            androidx.compose.material3.CircularProgressIndicator()
+                        }
+                    }
+
+                    // Selection Bar (overlaid on top of grid)
+                    if (uiState.isCaregiverMode && uiState.selectedButtonIds.isNotEmpty()) {
+                        com.example.myaac.ui.components.SelectionBar(
+                            selectedCount = uiState.selectedButtonIds.size,
+                            allBoards = allBoards,
+                            onClearSelection = { viewModel.clearSelection() },
+                            onDelete = { viewModel.deleteSelectedButtons() },
+                            onToggleHide = { viewModel.toggleHideSelectedButtons() },
+                            onDuplicate = { viewModel.duplicateSelectedButtons() },
+                            onMoveToBoard = { boardId -> viewModel.moveSelectedButtonsToBoard(boardId) },
+                            onEdit = {
+                                // Get the single selected button and edit it
+                                val selectedId = uiState.selectedButtonIds.first()
+                                val button = uiState.currentBoard?.buttons?.find { it.id == selectedId }
+                                if (button != null) {
+                                    buttonToEdit = button
+                                    viewModel.clearSelection()
                                 }
-                            }
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                } else {
-                     // Loading STATE
-                     androidx.compose.foundation.layout.Box(modifier = Modifier.weight(1f).fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                         androidx.compose.material3.CircularProgressIndicator()
-                     }
+                            },
+                            modifier = Modifier.align(Alignment.TopCenter)
+                        )
+                    }
                 }
             }
         }
+    }
+
+    
+    if (grammarVariations != null) {
+        com.example.myaac.ui.components.GrammarPopup(
+            baseWord = grammarBaseWord,
+            variations = grammarVariations!!,
+            onDismiss = { grammarVariations = null },
+            onSelect = { variant ->
+                grammarVariations = null
+                // Add to sentence bar
+                val tempButton = com.example.myaac.model.AacButton(
+                    id = "grammar_${java.util.UUID.randomUUID()}",
+                    label = variant,
+                    speechText = variant,
+                    action = ButtonAction.Speak(variant)
+                )
+                viewModel.onButtonPress(tempButton)
+                onSpeak(variant)
+            }
+        )
     }
 }

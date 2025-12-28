@@ -10,7 +10,7 @@ if (-not $devices) {
     Write-Host "Debug - check adb devices output:"
     adb devices
     Read-Host "Press Enter to exit..."
-    exit 1
+    Stop-Process -Id $PID
 }
 
 Write-Host "Device found. Building and Installing..."
@@ -31,10 +31,10 @@ if ($LASTEXITCODE -eq 0) {
         Start-Sleep -Seconds 1
     }
     Write-Host "`rClosing now.              "
-    exit 0
+    Stop-Process -Id $PID
 }
 else {
     Write-Host "Build failed." -ForegroundColor Red
     Read-Host "Press Enter to exit..."
-    exit 1
+    Stop-Process -Id $PID
 }

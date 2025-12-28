@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,7 +25,13 @@ fun SettingsScreen(
     onTextScaleChange: (Float) -> Unit,
     onTtsRateChange: (Float) -> Unit,
     onLocationSuggestionsChange: (Boolean) -> Unit,
+    onHorizontalNavigationChange: (Boolean) -> Unit,
     onDisabilityTypeChange: (DisabilityType) -> Unit,
+    onShowSymbolsInSentenceChange: (Boolean) -> Unit,
+    onItemsToGenerateChange: (Int) -> Unit,
+    onMaxBoardCapacityChange: (Int) -> Unit,
+    onFontFamilyChange: (String) -> Unit,
+    onManagePronunciations: () -> Unit = {},
     onBack: () -> Unit
 ) {
     Scaffold(
@@ -47,18 +54,15 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // User Profile
-            SettingSection(title = stringResource(R.string.user_profile)) {
-                DisabilitySelector(
+            // General Section
+            SettingSection(title = "General") {
+                /*DisabilitySelector(
                     selected = settings.disabilityType,
                     onSelect = onDisabilityTypeChange
-                )
-            }
-            
-            Divider()
-
-            // Language Selection
-            SettingSection(title = stringResource(R.string.language)) {
+                )*/
+                
+                Divider()
+                
                 LanguageSelector(
                     selectedLanguage = settings.languageCode,
                     onLanguageSelected = onLanguageChange
@@ -67,8 +71,14 @@ fun SettingsScreen(
             
             Divider()
             
-            // Text Size
-            SettingSection(title = stringResource(R.string.text_size)) {
+            // Appearance Section
+            SettingSection(title = "Appearance") {
+                // Text Size
+                Text(
+                    text = stringResource(R.string.text_size),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 SliderWithLabels(
                     value = settings.textScale,
                     onValueChange = onTextScaleChange,
@@ -77,12 +87,26 @@ fun SettingsScreen(
                     startLabel = stringResource(R.string.small),
                     endLabel = stringResource(R.string.large)
                 )
+                
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                
+                // Font Family
+                FontSelector(
+                    selectedFont = settings.fontFamily,
+                    onFontSelected = onFontFamilyChange
+                )
             }
             
             Divider()
             
-            // TTS Speed
-            SettingSection(title = stringResource(R.string.tts_speed)) {
+            // Speech Section
+            SettingSection(title = "Speech") {
+                // TTS Speed
+                Text(
+                    text = stringResource(R.string.tts_speed),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 SliderWithLabels(
                     value = settings.ttsRate,
                     onValueChange = onTtsRateChange,
@@ -91,13 +115,44 @@ fun SettingsScreen(
                     startLabel = stringResource(R.string.slow),
                     endLabel = stringResource(R.string.fast)
                 )
+
+                // Pronunciation Management
+                if (settings.languageCode == "iw" || settings.languageCode == "he") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onManagePronunciations() }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Manage Custom Pronunciations",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Add nikud to fix mispronounced words",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Manage",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
-
-
+            
             Divider()
 
-            // Location Suggestions
-            SettingSection(title = stringResource(R.string.location_suggestions)) {
+            // Navigation & Interaction Section
+            SettingSection(title = "Navigation & Interaction") {
+                // Location Suggestions
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -113,6 +168,113 @@ fun SettingsScreen(
                         checked = settings.locationSuggestionsEnabled,
                         onCheckedChange = onLocationSuggestionsChange
                     )
+                }
+                
+                // Horizontal Board Navigation
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.enable_horizontal_board_navigation),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f).padding(end = 16.dp)
+                    )
+                    Switch(
+                        checked = settings.showHorizontalNavigation,
+                        onCheckedChange = onHorizontalNavigationChange
+                    )
+                }
+                
+                // Sentence Field Display
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.show_symbols_in_sentence_bar),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f).padding(end = 16.dp)
+                    )
+                    Switch(
+                        checked = settings.showSymbolsInSentenceBar,
+                        onCheckedChange = onShowSymbolsInSentenceChange
+                    )
+                }
+            }
+            
+            Divider()
+
+            // Content Generation Section
+            SettingSection(title = "Content Generation") {
+                // Items to Auto-Generate
+                Column {
+                    Text(
+                        text = "${stringResource(R.string.items_to_generate_description)}: ${settings.itemsToGenerate}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Slider(
+                        value = settings.itemsToGenerate.toFloat(),
+                        onValueChange = { onItemsToGenerateChange(it.toInt()) },
+                        valueRange = 1f..50f,
+                        steps = 48,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "1",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "50",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Max Board Capacity
+                Column {
+                    Text(
+                        text = "${stringResource(R.string.max_board_capacity_description)}: ${settings.maxBoardCapacity}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Slider(
+                        value = settings.maxBoardCapacity.toFloat(),
+                        onValueChange = { onMaxBoardCapacityChange(it.toInt()) },
+                        valueRange = 50f..1000f,
+                        steps = 94,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "50",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "1000",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -226,6 +388,47 @@ fun DisabilitySelector(
                     text = stringResource(stringRes),
                     style = MaterialTheme.typography.bodyLarge
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun FontSelector(
+    selectedFont: String,
+    onFontSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val fonts = listOf("System", "OpenDyslexic", "Atkinson Hyperlegible", "Andika", "Serif", "SansSerif", "Monospace", "Cursive")
+
+    Column {
+        Text(
+            text = "Font Family",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Box {
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = selectedFont)
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                fonts.forEach { font ->
+                    DropdownMenuItem(
+                        text = { Text(font) },
+                        onClick = {
+                            onFontSelected(font)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
     }

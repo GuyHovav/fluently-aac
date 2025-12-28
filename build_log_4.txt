@@ -37,9 +37,8 @@
 > Task :app:writeDebugSigningConfigVersions UP-TO-DATE
 
 > Task :app:compileDebugKotlin
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/CommunicationGrid.kt:185:13 @Composable invocations can only happen from the context of a @Composable function
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/CommunicationGrid.kt:185:53 Cannot access 'draggingItemKey': it is invisible (private in a supertype) in 'ReorderableLazyGridState'
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/CommunicationGrid.kt:186:52 Cannot access 'draggingItemKey': it is invisible (private in a supertype) in 'ReorderableLazyGridState'
+e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/CommunicationGrid.kt:102:32 Type 'MutableState<String?>' has no method 'setValue(Nothing?, KProperty<*>, String?)' and thus it cannot serve as a delegate for var (read-write property)
+e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/CommunicationGrid.kt:153:20 Type 'MutableState<Boolean>' has no method 'setValue(Nothing?, KProperty<*>, Boolean)' and thus it cannot serve as a delegate for var (read-write property)
 
 > Task :app:compileDebugKotlin FAILED
 
@@ -64,5 +63,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.0-milestone-1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 6s
+BUILD FAILED in 11s
 33 actionable tasks: 2 executed, 31 up-to-date

@@ -64,6 +64,16 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/plexus/components.xml"
+            excludes += "META-INF/DEPENDENCIES"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/license.txt"
+            excludes += "META-INF/NOTICE"
+            excludes += "META-INF/NOTICE.txt"
+            excludes += "META-INF/notice.txt"
+            excludes += "META-INF/ASL2.0"
+            excludes += "META-INF/*.kotlin_module" 
         }
     }
 }
@@ -92,6 +102,9 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation("com.google.android.material:material:1.10.0")
 
+    // Drag and drop reordering
+    implementation("sh.calvin.reorderable:reorderable:2.4.0")
+
     // Room components
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
@@ -100,6 +113,10 @@ dependencies {
 
     // Gson for TypeConverters
     implementation("com.google.code.gson:gson:2.10.1")
+
+    // Retrofit
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
     // Gemini AI
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
@@ -115,4 +132,18 @@ dependencies {
 
     // Location
     implementation("com.google.android.gms:play-services-location:21.0.1")
+
+    // CameraX
+    val cameraxVersion = "1.3.1"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+    implementation("com.google.accompanist:accompanist-permissions:0.35.0-alpha")
+    // SimpleNLG for Grammar/Morphology
+    implementation("uk.ac.abdn:SimpleNLG:4.5.0") {
+        exclude(group = "gov.nih.nlm.nls.lexaccess")
+        exclude(group = "javax.xml.bind")
+        exclude(group = "com.sun.xml.bind")
+    }
 }

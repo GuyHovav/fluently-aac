@@ -1,0 +1,4 @@
+# Agent Rules
+
+1. **Post-Task Verification**: After finishing a coding task, always PROPOSE to run the PowerShell script that compiles and installs the app on the connected phone: `.\restart_app.ps1`.
+2. **Prefer Libraries**: When a task is complex, prioritize researching and suggesting popular, well-maintained libraries (like via `search_web`) instead of writing complex custom implementations from scratch.
