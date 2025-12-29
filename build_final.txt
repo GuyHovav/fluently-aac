@@ -37,11 +37,11 @@
 > Task :app:writeDebugSigningConfigVersions UP-TO-DATE
 
 > Task :app:compileDebugKotlin FAILED
-.\gradlew.bat : e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/SentenceBar.kt:193:89 Unresolved reference: Refresh
+.\gradlew.bat : e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/SentenceBar.kt:193:89 Unresolved reference: ArrowBack
 At line:1 char:65
 + ... Android\Android Studio\jbr"; .\gradlew.bat assembleDebug 2>&1 | Out-F ...
 +                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (e: file:///C:/d...erence: Refresh:String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (e: file:///C:/d...ence: ArrowBack:String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
 
@@ -66,5 +66,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.0-milestone-1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 12s
+BUILD FAILED in 11s
 33 actionable tasks: 2 executed, 31 up-to-date

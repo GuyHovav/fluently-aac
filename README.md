@@ -9,6 +9,11 @@ An Augmentative and Alternative Communication (AAC) app for Android, powered by 
   - Magic Board generation using Gemini AI
   - Smart image cropping and object detection
   - Predictive button suggestions
+  - **Smart Grammar Correction**: Automatically fixes grammar and sentence structure
+- **User Experience**:
+  - **Display Customization**: Independent font and display size settings
+  - **Pronunciation Dictionary**: Customize how specific words are spoken
+  - **Home Hub**: Central navigation board with linking to other boards
 - **User & Caregiver Modes**: 
   - User Mode: Simplified interface for communication
   - Caregiver Mode: Full editing capabilities (PIN protected)

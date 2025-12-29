@@ -45,12 +45,14 @@ import androidx.compose.material3.*
 import com.example.myaac.model.ButtonAction
 import com.example.myaac.ui.components.CommunicationGrid
 import com.example.myaac.ui.components.SentenceBar
+import com.example.myaac.ui.components.GenerateItemsDialog
 import com.example.myaac.ui.theme.MyAACTheme
 import com.example.myaac.viewmodel.BoardViewModel
 import com.example.myaac.ui.SettingsScreen
 import com.example.myaac.ui.PronunciationManagementScreen
 import com.example.myaac.data.repository.AppSettings
 import java.util.Locale
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
@@ -77,15 +79,60 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         
         // Initialize TTS
         tts = TextToSpeech(this, this)
+        
+        // Handle Splash Screen Logic
+        // Handle Splash Screen Logic
+        val splashScreen = installSplashScreen()
+        
+        var isDataLoaded = false
+        
+        // We need to peek into the ViewModel to know when data is ready
+        // Since we can't easily collect flow in onCreate before setContent without lifecycle scope complexity,
+        // we'll rely on a side-effect or just checking the repo state if possible?
+        // Better: Launch a small scope to collect until ready.
+        
+        // Actually, we can get the ViewModel instance here using ViewModelProvider
+        val factory = BoardViewModel.Factory
+        val tempViewModel = androidx.lifecycle.ViewModelProvider(this, factory)[BoardViewModel::class.java]
+        
+        // Keep splash screen on until we have a current board and not loading
+        splashScreen.setKeepOnScreenCondition {
+            val state = tempViewModel.uiState.value
+            // Wait until we have a board and we are not in initial loading state
+            // Note: isLoading might trigger for other things, so strict check:
+             state.currentBoard == null
+        }
 
         setContent {
                 val settings by settingsRepository.settings.collectAsState()
-                MyAACTheme(
-                    fontFamily = settings.fontFamily
+                
+                // Calculate Density Override
+                val currentDensity = androidx.compose.ui.platform.LocalDensity.current
+                val finalDensity = remember(settings.useSystemSettings, settings.displayScale, settings.textScale, currentDensity) {
+                    if (settings.useSystemSettings) {
+                        currentDensity
+                    } else {
+                        androidx.compose.ui.unit.Density(
+                            density = currentDensity.density * settings.displayScale,
+                            fontScale = settings.textScale
+                        )
+                    }
+                }
+
+                androidx.compose.runtime.CompositionLocalProvider(
+                    androidx.compose.ui.platform.LocalDensity provides finalDensity
                 ) {
+                    MyAACTheme(
+                        fontFamily = settings.fontFamily
+                    ) {
                     var showSettings by remember { mutableStateOf(false) }
                 var showPronunciationManagement by remember { mutableStateOf(false) }
                 
+                val scope = rememberCoroutineScope()
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val app = context.applicationContext as com.example.myaac.MyAacApplication
+                val geminiService = app.geminiService
+
                 when {
                     showPronunciationManagement -> {
                         PronunciationManagementScreen(
@@ -94,49 +141,8 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                     }
                     showSettings -> {
                         SettingsScreen(
-                            settings = settings,
-                            onLanguageChange = { code ->
-                                settingsRepository.setLanguage(code)
-                                // Update TTS language
-                                val locale = when (code) {
-                                    "iw" -> Locale("iw", "IL")
-                                    else -> Locale.US
-                                }
-                                tts?.language = locale
-                                // Recreate activity to apply new language
-                                recreate()
-                            },
-                            onTextScaleChange = { scale ->
-                                settingsRepository.setTextScale(scale)
-                            },
-                            onTtsRateChange = { rate ->
-                                settingsRepository.setTtsRate(rate)
-                            },
-                            onLocationSuggestionsChange = { enabled ->
-                                settingsRepository.setLocationSuggestionsEnabled(enabled)
-                            },
-                            onHorizontalNavigationChange = { enabled ->
-                                settingsRepository.setHorizontalNavigationEnabled(enabled)
-                            },
-                            onDisabilityTypeChange = { type ->
-                                settingsRepository.setDisabilityType(type)
-                            },
-                            onShowSymbolsInSentenceChange = { enabled ->
-                                settingsRepository.setShowSymbolsInSentenceBar(enabled)
-                            },
-                            onItemsToGenerateChange = { count ->
-                                settingsRepository.setItemsToGenerate(count)
-                            },
-                            onMaxBoardCapacityChange = { count ->
-                                settingsRepository.setMaxBoardCapacity(count)
-                            },
-                            onFontFamilyChange = { family ->
-                                settingsRepository.setFontFamily(family)
-                            },
-                            onManagePronunciations = {
-                                showPronunciationManagement = true
-                            },
-                            onBack = { showSettings = false }
+                            repository = settingsRepository,
+                            onNavigateBack = { showSettings = false }
                         )
                     }
                     else -> {
@@ -146,13 +152,15 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                             textScale = settings.textScale,
                             languageCode = settings.languageCode,
                             showHorizontalNavigation = settings.showHorizontalNavigation,
-                            showSymbolsInSentenceBar = settings.showSymbolsInSentenceBar
+                            showSymbolsInSentenceBar = settings.showSymbolsInSentenceBar,
+                            symbolLibrary = settings.symbolLibrary
                         )
                     }
                 }
             }
         }
     }
+}
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
@@ -199,7 +207,8 @@ fun MainScreen(
     textScale: Float,
     languageCode: String = "en",
     showHorizontalNavigation: Boolean = false,
-    showSymbolsInSentenceBar: Boolean = true
+    showSymbolsInSentenceBar: Boolean = true,
+    symbolLibrary: String = "ARASAAC"
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val allBoards by viewModel.allBoards.collectAsState(initial = emptyList())
@@ -224,6 +233,60 @@ fun MainScreen(
     var showLocationDialog by remember { mutableStateOf(false) }
     var suggestedBoardName by remember { mutableStateOf("") }
     var isCheckingLocation by remember { mutableStateOf(false) }
+
+    // Exit Confirmation Logic
+    var showExitConfirmation by remember { mutableStateOf(false) }
+
+    // Symbol Generation Dialog
+    var showGenerateItemsDialog by remember { mutableStateOf(false) }
+    
+    // Back Handler
+    androidx.activity.compose.BackHandler(enabled = true) {
+        if (uiState.currentBoard?.id == "home" && !viewModel.canNavigateBack) {
+             showExitConfirmation = true
+        } else if (viewModel.canNavigateBack) {
+            viewModel.navigateBack()
+        } else {
+             // Fallback if not on home but stack empty? Should ideally refer to home or exit
+             // If we are deep somewhere but empty stack (e.g. direct load), maybe go home?
+             // But for now, let's treat as exit path or go home.
+             if (uiState.currentBoard?.id != "home") {
+                 viewModel.navigateToBoard("home")
+             } else {
+                 showExitConfirmation = true
+             }
+        }
+    }
+    
+    // Auto-Speak Effects
+    androidx.compose.runtime.LaunchedEffect(viewModel) {
+        viewModel.speechRequest.collect { text ->
+             onSpeak(text)
+        }
+    }
+
+    
+    if (showExitConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showExitConfirmation = false },
+            title = { Text(stringResource(R.string.exit_app_title)) },
+            text = { Text(stringResource(R.string.exit_app_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExitConfirmation = false
+                    val activity = context as? android.app.Activity
+                    activity?.finish()
+                }) {
+                    Text(stringResource(R.string.yes_exit))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitConfirmation = false }) {
+                    Text(stringResource(R.string.no_stay))
+                }
+            }
+        )
+    }
 
     // Link Creation Logic
     var createdBoardIdForLink by remember { mutableStateOf<String?>(null) }
@@ -412,12 +475,23 @@ fun MainScreen(
         )
     }
 
+    if (showGenerateItemsDialog && uiState.currentBoard != null) {
+        GenerateItemsDialog(
+            onDismiss = { showGenerateItemsDialog = false },
+            onGenerate = { count ->
+                viewModel.expandBoard(uiState.currentBoard!!, count)
+                showGenerateItemsDialog = false
+            }
+        )
+    }
+
     if (buttonToEdit != null) {
         // ... (Edit Dialog Code remains same)
          com.example.myaac.ui.components.EditButtonDialog(
             button = buttonToEdit!!,
             allBoards = allBoards,
             defaultLanguage = languageCode,
+            symbolLibrary = symbolLibrary,
             onDismiss = { buttonToEdit = null },
             onSave = { updatedButton ->
                 viewModel.updateButton(updatedButton)
@@ -594,6 +668,7 @@ fun MainScreen(
 
                 // Sentence Bar (only show in user mode, not in caregiver mode)
                 if (!uiState.isCaregiverMode) {
+                    val settings by app.settingsRepository.settings.collectAsState()
                     SentenceBar(
                         sentence = uiState.sentence,
                         onClear = { viewModel.clearSentence() },
@@ -602,11 +677,20 @@ fun MainScreen(
                         ))}, 
                         onSpeak = { text -> onSpeak(text) },
                         languageCode = languageCode,
-                        showSymbols = showSymbolsInSentenceBar
+                        showSymbols = showSymbolsInSentenceBar,
+                        showUndo = uiState.showUndoAi,
+                        onUndo = viewModel::undoAiCorrection,
+                        predictions = uiState.predictions,
+                        predictionSymbols = uiState.predictionSymbols,
+                        showPredictionSymbols = settings.showSymbolsInPredictions,
+                        isPredictionLoading = uiState.isPredictionLoading,
+                        onPredictionClick = { word ->
+                            viewModel.onPredictionSelected(word)
+                        },
+                        allowPredictionStrip = true,
+                        onGrammarCheck = { viewModel.applyPendingGrammarCorrection() }
                     )
                 }
-
-                // Smart Strip (AI Predictions) - REMOVED
 
                 // Grid with overlaid SelectionBar
                 androidx.compose.foundation.layout.Box(
@@ -631,9 +715,18 @@ fun MainScreen(
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
+                            // For home board, use dynamic buttons if available
+                            // logic: if home board but dynamic buttons not ready, show mostly empty/loading
+                            // to avoid "old board" flash.
+                            val isHome = uiState.currentBoard?.id == "home"
+                            val displayButtons = if (isHome) {
+                                uiState.homeBoardButtons ?: emptyList() // Or waiting...
+                            } else {
+                                uiState.currentBoard?.buttons ?: emptyList()
+                            }
 
                             CommunicationGrid(
-                                buttons = uiState.currentBoard!!.buttons,
+                                buttons = displayButtons,
                                 columns = uiState.currentBoard!!.columns,
                                 isCaregiverMode = uiState.isCaregiverMode,
                                 selectedButtonIds = uiState.selectedButtonIds,
@@ -648,8 +741,31 @@ fun MainScreen(
                                         }
                                     } else {
                                         viewModel.onButtonPress(button)
-                                        if (button.action is ButtonAction.Speak) {
-                                            onSpeak(button.textToSpeak)
+                                        when (val action = button.action) {
+                                            is ButtonAction.Speak -> onSpeak(button.textToSpeak)
+                                            is ButtonAction.LaunchApp -> {
+                                                // Launch external app
+                                                try {
+                                                    val intent = context.packageManager.getLaunchIntentForPackage(action.packageName)
+                                                    if (intent != null) {
+                                                        context.startActivity(intent)
+                                                    } else {
+                                                        // App not found
+                                                        android.widget.Toast.makeText(
+                                                            context,
+                                                            "App not found: ${action.packageName}",
+                                                            android.widget.Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
+                                                } catch (e: Exception) {
+                                                    android.widget.Toast.makeText(
+                                                        context,
+                                                        "Error launching app: ${e.message}",
+                                                        android.widget.Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                            else -> {}
                                         }
                                     }
                                 },
@@ -685,9 +801,12 @@ fun MainScreen(
                                         viewModel.updateBoardButtons(newButtons)
                                     }
                                 } else null,
+                                onInteractionEnd = viewModel::onInteractionEnd,
+                                onPlaceholderLongPress = {
+                                    showGenerateItemsDialog = true
+                                },
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(top = if (uiState.isCaregiverMode) 72.dp else 0.dp)
                             )
                         }
                     } else {
@@ -722,6 +841,8 @@ fun MainScreen(
                             modifier = Modifier.align(Alignment.TopCenter)
                         )
                     }
+                    
+
                 }
             }
         }

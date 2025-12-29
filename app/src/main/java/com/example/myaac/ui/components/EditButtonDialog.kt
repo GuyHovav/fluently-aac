@@ -45,6 +45,7 @@ fun EditButtonDialog(
     button: AacButton,
     allBoards: List<Board>,
     defaultLanguage: String = "en",
+    symbolLibrary: String = "ARASAAC",
     onDismiss: () -> Unit,
     onSave: (AacButton) -> Unit,
 
@@ -332,7 +333,7 @@ fun EditButtonDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                   listOf(0xFFFFFFFF, 0xFFE3F2FD, 0xFFFFEBEE, 0xFFE8F5E9, 0xFFFFF3E0, 0xFFF3E5F5).forEach { colorVal ->
+                   com.example.myaac.ui.theme.ItemPalette.colors.forEach { colorVal ->
                         Box(
                             modifier = Modifier
                                 .size(32.dp)
@@ -450,6 +451,7 @@ fun EditButtonDialog(
         SymbolSearchDialog(
             initialQuery = label,
             defaultLanguage = defaultLanguage,
+            symbolLibrary = symbolLibrary,
             onDismiss = { showSymbolSearch = false },
             onSymbolSelected = { url, symbolLabel ->
                 imageUri = Uri.parse(url)

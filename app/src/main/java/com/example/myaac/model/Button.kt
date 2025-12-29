@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 sealed interface ButtonAction {
     data class Speak(val text: String) : ButtonAction
     data class LinkToBoard(val boardId: String) : ButtonAction
+    data class LaunchApp(val packageName: String) : ButtonAction
     data object ClearSentence : ButtonAction // Example function
     data object DeleteLastWord : ButtonAction
 }

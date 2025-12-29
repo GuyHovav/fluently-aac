@@ -43,6 +43,10 @@ class Converters {
                     jsonObject.addProperty("type", "link")
                     jsonObject.addProperty("boardId", src.boardId)
                 }
+                is ButtonAction.LaunchApp -> {
+                    jsonObject.addProperty("type", "launch_app")
+                    jsonObject.addProperty("packageName", src.packageName)
+                }
                 ButtonAction.ClearSentence -> jsonObject.addProperty("type", "clear")
                 ButtonAction.DeleteLastWord -> jsonObject.addProperty("type", "delete")
             }
@@ -54,6 +58,7 @@ class Converters {
             return when (val type = jsonObject.get("type").asString) {
                 "speak" -> ButtonAction.Speak(jsonObject.get("text").asString)
                 "link" -> ButtonAction.LinkToBoard(jsonObject.get("boardId").asString)
+                "launch_app" -> ButtonAction.LaunchApp(jsonObject.get("packageName").asString)
                 "clear" -> ButtonAction.ClearSentence
                 "delete" -> ButtonAction.DeleteLastWord
                 else -> ButtonAction.Speak("Error: Unknown action $type")

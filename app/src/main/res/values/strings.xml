@@ -86,6 +86,12 @@
     <string name="board_feelings_name">Feelings</string>
     <string name="board_learn_name">Learn</string>
     <string name="board_home_name">Home Board</string>
+    <string name="board_i_want_name">I Want</string>
+    <string name="board_i_need_name">I Need</string>
+    <string name="board_you_name">You</string>
+    <string name="board_family_name">Family</string>
+    <string name="board_friends_name">Friends</string>
+    <string name="board_apps_name">Apps</string>
 
     <string name="btn_i_want">I want</string>
     <string name="btn_water">Water</string>
@@ -123,6 +129,31 @@
     <string name="spoken_help">Help me please</string>
     <string name="spoken_bathroom">I need to use the bathroom</string>
     <string name="spoken_play">I want to play</string>
+    
+    <!-- Category Board Buttons -->
+    <string name="btn_i_need">I need</string>
+    <string name="btn_tissue">Tissue</string>
+    <string name="btn_drink">Drink</string>
+    <string name="btn_to_eat">To eat</string>
+    <string name="btn_to_sleep">To sleep</string>
+    <string name="btn_to_go">To go</string>
+    <string name="btn_mom">Mom</string>
+    <string name="btn_dad">Dad</string>
+    <string name="btn_brother">Brother</string>
+    <string name="btn_sister">Sister</string>
+    <string name="btn_friend">Friend</string>
+    <string name="btn_how_are_you">How are you?</string>
+    <string name="btn_what_do_you_want">What do you want?</string>
+    <string name="btn_where_are_you">Where are you?</string>
+    
+    <!-- App Shortcuts -->
+    <string name="app_shortcuts">App Shortcuts</string>
+    <string name="manage_app_shortcuts">Manage App Shortcuts</string>
+    <string name="add_app">Add App</string>
+    <string name="select_app_to_add">Select an app to add</string>
+    <string name="no_apps_configured">No apps configured yet</string>
+    <string name="remove_app">Remove</string>
+    
     <string name="grammar_fix">Fix Grammar</string>
     <string name="loading_populating_board">Please wait while board is being populated</string>
     <string name="new_visual_scene">✨ New Visual Scene</string>
@@ -158,4 +189,10 @@
     <string name="select_target_board">Select Target Board...</string>
     <string name="no_thanks">No, Thanks</string>
     <string name="link_to_board_label">Link to: %1$s</string>
+    
+    <!-- App Exit -->
+    <string name="exit_app_title">Exit App</string>
+    <string name="exit_app_message">Are you sure you want to exit?</string>
+    <string name="yes_exit">Yes, Exit</string>
+    <string name="no_stay">No, Stay</string>
 </resources>

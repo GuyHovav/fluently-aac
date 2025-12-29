@@ -1,7 +1,7 @@
+Configuration on demand is an incubating feature.
+> Task :app:checkKotlinGradlePluginConfigurationErrors
 > Task :app:preBuild UP-TO-DATE
 > Task :app:preDebugBuild UP-TO-DATE
-> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
-> Task :app:checkKotlinGradlePluginConfigurationErrors
 > Task :app:generateDebugBuildConfig UP-TO-DATE
 > Task :app:checkDebugAarMetadata UP-TO-DATE
 > Task :app:processDebugNavigationResources UP-TO-DATE
@@ -19,29 +19,26 @@
 > Task :app:processDebugManifestForPackage UP-TO-DATE
 > Task :app:processDebugResources UP-TO-DATE
 > Task :app:kspDebugKotlin UP-TO-DATE
-> Task :app:javaPreCompileDebug UP-TO-DATE
-> Task :app:mergeDebugShaders UP-TO-DATE
-> Task :app:compileDebugShaders NO-SOURCE
-> Task :app:generateDebugAssets UP-TO-DATE
-> Task :app:mergeDebugAssets UP-TO-DATE
-> Task :app:compressDebugAssets UP-TO-DATE
-> Task :app:checkDebugDuplicateClasses UP-TO-DATE
-> Task :app:desugarDebugFileDependencies UP-TO-DATE
-> Task :app:mergeExtDexDebug UP-TO-DATE
-> Task :app:mergeLibDexDebug UP-TO-DATE
-> Task :app:mergeDebugJniLibFolders UP-TO-DATE
-> Task :app:mergeDebugNativeLibs UP-TO-DATE
-> Task :app:stripDebugDebugSymbols UP-TO-DATE
-> Task :app:validateSigningDebug UP-TO-DATE
-> Task :app:writeDebugAppMetadata UP-TO-DATE
-> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
-
-> Task :app:compileDebugKotlin
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/CommunicationGrid.kt:185:13 @Composable invocations can only happen from the context of a @Composable function
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/CommunicationGrid.kt:185:53 Cannot access 'draggingItemKey': it is invisible (private in a supertype) in 'ReorderableLazyGridState'
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/CommunicationGrid.kt:186:52 Cannot access 'draggingItemKey': it is invisible (private in a supertype) in 'ReorderableLazyGridState'
 
 > Task :app:compileDebugKotlin FAILED
+e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/viewmodel/BoardViewModel.kt:884:43 Unresolved reference: value
+e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/viewmodel/BoardViewModel.kt:886:23 Unresolved reference: it
+e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/viewmodel/BoardViewModel.kt:887:27 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/viewmodel/BoardViewModel.kt:887:34 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/viewmodel/BoardViewModel.kt:889:67 Overload resolution ambiguity: 
+public final operator fun plus(other: Byte): Int defined in kotlin.Int
+public final operator fun plus(other: Double): Double defined in kotlin.Int
+public final operator fun plus(other: Float): Float defined in kotlin.Int
+public final operator fun plus(other: Int): Int defined in kotlin.Int
+public final operator fun plus(other: Long): Long defined in kotlin.Int
+public final operator fun plus(other: Short): Int defined in kotlin.Int
+e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/viewmodel/BoardViewModel.kt:898:72 Overload resolution ambiguity: 
+public operator fun <T> Collection<TypeVariable(T)>.plus(elements: Array<out TypeVariable(T)>): List<TypeVariable(T)> defined in kotlin.collections
+public operator fun <T> Collection<TypeVariable(T)>.plus(elements: Iterable<TypeVariable(T)>): List<TypeVariable(T)> defined in kotlin.collections
+public operator fun <T> Collection<TypeVariable(T)>.plus(elements: Sequence<TypeVariable(T)>): List<TypeVariable(T)> defined in kotlin.collections
+public operator fun <T> Iterable<TypeVariable(T)>.plus(elements: Array<out TypeVariable(T)>): List<TypeVariable(T)> defined in kotlin.collections
+public operator fun <T> Iterable<TypeVariable(T)>.plus(elements: Iterable<TypeVariable(T)>): List<TypeVariable(T)> defined in kotlin.collections
+public operator fun <T> Iterable<TypeVariable(T)>.plus(elements: Sequence<TypeVariable(T)>): List<TypeVariable(T)> defined in kotlin.collections
 
 [Incubating] Problems report is available at: file:///C:/dev/MyAAC/build/reports/problems/problems-report.html
 
@@ -64,5 +61,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.0-milestone-1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 6s
-33 actionable tasks: 2 executed, 31 up-to-date
+BUILD FAILED in 16s
+19 actionable tasks: 2 executed, 17 up-to-date

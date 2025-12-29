@@ -1,4 +1,4 @@
-> Task :app:preBuild UP-TO-DATE
+﻿> Task :app:preBuild UP-TO-DATE
 > Task :app:preDebugBuild UP-TO-DATE
 > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
 > Task :app:checkKotlinGradlePluginConfigurationErrors
@@ -18,7 +18,6 @@
 > Task :app:processDebugManifest UP-TO-DATE
 > Task :app:processDebugManifestForPackage UP-TO-DATE
 > Task :app:processDebugResources UP-TO-DATE
-> Task :app:kspDebugKotlin UP-TO-DATE
 > Task :app:javaPreCompileDebug UP-TO-DATE
 > Task :app:mergeDebugShaders UP-TO-DATE
 > Task :app:compileDebugShaders NO-SOURCE
@@ -35,12 +34,16 @@
 > Task :app:validateSigningDebug UP-TO-DATE
 > Task :app:writeDebugAppMetadata UP-TO-DATE
 > Task :app:writeDebugSigningConfigVersions UP-TO-DATE
-
-> Task :app:compileDebugKotlin
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/CommunicationGrid.kt:133:45 Cannot access 'draggingItemKey': it is invisible (private in a supertype) in 'ReorderableLazyGridState'
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/CommunicationGrid.kt:134:38 Cannot access 'draggingItemKey': it is invisible (private in a supertype) in 'ReorderableLazyGridState'
+> Task :app:kspDebugKotlin
 
 > Task :app:compileDebugKotlin FAILED
+.\gradlew.bat : e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/SentenceBar.kt:193:81 Unresolved reference: AutoMirrored
+At line:1 char:65
++ ... Android\Android Studio\jbr"; .\gradlew.bat assembleDebug 2>&1 | Out-F ...
++                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (e: file:///C:/d...e: AutoMirrored:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
 
 [Incubating] Problems report is available at: file:///C:/dev/MyAAC/build/reports/problems/problems-report.html
 
@@ -63,5 +66,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.0-milestone-1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 7s
-33 actionable tasks: 2 executed, 31 up-to-date
+BUILD FAILED in 14s
+33 actionable tasks: 3 executed, 30 up-to-date

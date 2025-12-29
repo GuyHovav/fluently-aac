@@ -38,6 +38,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Slider
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -84,6 +86,7 @@ fun SidebarContent(
     onSuggestBoardName: suspend (List<Bitmap>) -> String = { _ -> "" } // Default empty logic for preview/compat
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showCreateMenu by remember { mutableStateOf(false) }
     var showVisualSceneDialog by remember { mutableStateOf(false) }
     var showQuickBoardDialog by remember { mutableStateOf(false) }
     var boardToEdit by remember { mutableStateOf<Board?>(null) }
@@ -175,28 +178,44 @@ fun SidebarContent(
             Text(stringResource(R.string.boards), style = MaterialTheme.typography.titleLarge)
             if (isCaregiverMode) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = { showCreateDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Text(stringResource(R.string.new_board))
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { showVisualSceneDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = null)
-                    Text(stringResource(R.string.new_visual_scene))
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { showQuickBoardDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null)
-                    Text(stringResource(R.string.quick_board_from_photo))
+                Box {
+                    Button(
+                        onClick = { showCreateMenu = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.create_new_board))
+                    }
+                    DropdownMenu(
+                        expanded = showCreateMenu,
+                        onDismissRequest = { showCreateMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.new_board)) },
+                            onClick = {
+                                showCreateMenu = false
+                                showCreateDialog = true
+                            },
+                            leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.new_visual_scene)) },
+                            onClick = {
+                                showCreateMenu = false
+                                showVisualSceneDialog = true
+                            },
+                            leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.quick_board_from_photo)) },
+                            onClick = {
+                                showCreateMenu = false
+                                showQuickBoardDialog = true
+                            },
+                            leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) }
+                        )
+                    }
                 }
             }
         }
@@ -246,7 +265,20 @@ fun SidebarContent(
                     label = { Text(board.name) },
                     selected = board.id == currentBoardId,
                     onClick = { onBoardSelect(board) },
-                    icon = { Icon(Icons.Default.Folder, contentDescription = null) },
+                    icon = {
+                        if (!board.iconPath.isNullOrEmpty()) {
+                             AsyncImage(
+                                model = board.iconPath,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(Icons.Default.Folder, contentDescription = null)
+                        }
+                    },
                     badge = {
                 if (isCaregiverMode) {
                     androidx.compose.material3.IconButton(onClick = { boardToEdit = board }) {
@@ -415,41 +447,11 @@ fun EditBoardDialog(
     var itemCount by remember { mutableStateOf(20) }
 
     if (showGenerateDialog) {
-        AlertDialog(
-            onDismissRequest = { showGenerateDialog = false },
-            title = { Text(stringResource(R.string.generate_items_dialog_title)) },
-            text = {
-                Column {
-                    Text(stringResource(R.string.generate_items_dialog_message))
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("${stringResource(R.string.items_to_generate)}: $itemCount", style = MaterialTheme.typography.bodyMedium)
-                    Slider(
-                        value = itemCount.toFloat(),
-                        onValueChange = { itemCount = it.toInt() },
-                        valueRange = 1f..50f,
-                        steps = 48
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("1", style = MaterialTheme.typography.bodySmall)
-                        Text("50", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    onExpand(itemCount)
-                    showGenerateDialog = false
-                }) {
-                    Text(stringResource(R.string.generate))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showGenerateDialog = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
+        GenerateItemsDialog(
+            onDismiss = { showGenerateDialog = false },
+            onGenerate = { itemCount ->
+                onExpand(itemCount)
+                showGenerateDialog = false
             }
         )
     }

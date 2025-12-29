@@ -16,8 +16,10 @@ object GrammarEngine {
     private val nouns = setOf(
         "apple", "banana", "cookie", "sandwich", "water", "milk", "juice", 
         "book", "crayon", "tablet", "bathroom", "home", "school", "mom", "dad",
-        "toy", "ball", "car", "dog", "cat", "friend", "teacher"
+        "toy", "ball", "car", "dog", "cat", "friend", "teacher", "mall", "park", "store"
     )
+    
+    private val places = setOf("home", "school", "mall", "park", "store", "bathroom")
 
     private val articles = setOf("a", "an", "the")
     private val prepositions = setOf("to", "for", "with", "at", "by", "from", "in", "on")
@@ -56,6 +58,13 @@ object GrammarEngine {
                     }
                 }
 
+                // Rule 1.5: "go" + Place -> Insert "to"
+                if ((current == "go" || current == "come") && isPlace(next)) {
+                    if (next != "home") { // "go home" is correct, "go to mall" is correct
+                        processedWords.add("to")
+                    }
+                }
+
                 // Rule 2: Pronoun + Adjective -> Insert am/is/are
                 if (isPronoun(current) && isAdjective(next)) {
                     val copula = when (current) {
@@ -71,7 +80,8 @@ object GrammarEngine {
 
                 // Rule 3: Verb + Noun -> Insert article
                 if (isVerb(current) && isNoun(next)) {
-                   if (!isNonCountable(next) && !articles.contains(current) && !prepositions.contains(current)) {
+                   // Don't insert article if it's a place we just handled with "to", or if it's non-countable
+                   if (!isPlace(next) && !isNonCountable(next) && !articles.contains(current) && !prepositions.contains(current) && next != "mom" && next != "dad") {
                        val article = if ("aeiou".contains(next[0])) "an" else "a"
                        processedWords.add(article)
                    }
@@ -92,10 +102,11 @@ object GrammarEngine {
         }.replaceFirstChar { it.uppercase() }
     }
 
-    private fun isVerb(word: String) = verbs.contains(word)
-    private fun isPronoun(word: String) = pronouns.contains(word)
-    private fun isAdjective(word: String) = adjectives.contains(word)
-    private fun isNoun(word: String) = nouns.contains(word)
+    fun isVerb(word: String) = verbs.contains(word)
+    fun isPronoun(word: String) = pronouns.contains(word)
+    fun isAdjective(word: String) = adjectives.contains(word)
+    fun isNoun(word: String) = nouns.contains(word)
+    fun isPlace(word: String) = places.contains(word)
     
     private fun isNonCountable(word: String) = setOf("water", "milk", "juice", "bread", "help", "work", "sleep").contains(word)
 }

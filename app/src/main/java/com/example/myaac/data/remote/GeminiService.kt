@@ -243,6 +243,45 @@ class GeminiService(private val apiKey: String) {
         }
     }
 
+    suspend fun predictNextWords(
+        context: List<String>,
+        count: Int = 5,
+        languageCode: String = "en"
+    ): List<String> {
+        return withContext(Dispatchers.IO) {
+            val languageName = if (languageCode == "iw" || languageCode == "he") "Hebrew" else "English"
+            val contextText = context.takeLast(5).joinToString(" ")
+            
+            val prompt = """
+                You are helping with word prediction for an AAC (Augmentative and Alternative Communication) app.
+                
+                The user has typed: "$contextText"
+                
+                Predict the next $count words they might want to say in $languageName.
+                Focus on:
+                - Common conversational words
+                - Contextually relevant words
+                - Simple, everyday vocabulary
+                
+                Return ONLY the words, separated by commas.
+                Example: want, need, like, have, go
+            """.trimIndent()
+            
+            try {
+                val response = textModel.generateContent(prompt)
+                val text = response.text?.trim() ?: return@withContext emptyList()
+                text.split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+                    .take(count)
+            } catch (e: Exception) {
+                android.util.Log.e("GeminiService", "Error in predictNextWords", e)
+                e.printStackTrace()
+                emptyList()
+            }
+        }
+    }
+
     // predictNextButtons removed
     suspend fun generateBoard(topic: String, languageCode: String = "en", count: Int = 16): List<String> {
         return withContext(Dispatchers.IO) {
@@ -342,6 +381,40 @@ class GeminiService(private val apiKey: String) {
             } catch (e: Exception) {
                 e.printStackTrace()
                 ""
+            }
+        }
+    }
+
+    suspend fun correctGrammar(sentence: String, languageCode: String = "en"): String {
+        return withContext(Dispatchers.IO) {
+            val languageName = if (languageCode == "iw" || languageCode == "he") "Hebrew" else "English"
+            val prompt = """
+                Fix the grammar of this sentence in $languageName.
+                Make it sound natural for spoken conversation.
+                Return ONLY the corrected sentence. No quotes, no explanations.
+
+                Input: "$sentence"
+            """.trimIndent()
+
+            try {
+                val response = textModel.generateContent(prompt)
+                response.text?.trim() ?: sentence
+            } catch (e: Exception) {
+                e.printStackTrace()
+                sentence
+            }
+        }
+    }
+
+    suspend fun testLatency(prompt: String = "ping"): Long {
+        return withContext(Dispatchers.IO) {
+            val start = System.currentTimeMillis()
+            try {
+                textModel.generateContent(prompt)
+                System.currentTimeMillis() - start
+            } catch (e: Exception) {
+                e.printStackTrace()
+                -1L
             }
         }
     }

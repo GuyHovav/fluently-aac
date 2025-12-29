@@ -21,19 +21,23 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
-import com.example.myaac.data.remote.ArasaacPictogram
+// Import new service classes
+import com.example.myaac.data.remote.SymbolResult
+import com.example.myaac.data.remote.SymbolService
 import com.example.myaac.data.remote.ArasaacService
+import com.example.myaac.data.remote.GlobalSymbolsService
 import kotlinx.coroutines.launch
 
 @Composable
 fun SymbolSearchDialog(
     initialQuery: String = "",
     defaultLanguage: String = "en",
+    symbolLibrary: String = "ARASAAC",
     onDismiss: () -> Unit,
     onSymbolSelected: (url: String, label: String) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf(TextFieldValue(initialQuery)) }
-    var results by remember { mutableStateOf<List<ArasaacPictogram>>(emptyList()) }
+    var results by remember { mutableStateOf<List<SymbolResult>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     
@@ -56,7 +60,15 @@ fun SymbolSearchDialog(
     var showLanguageMenu by remember { mutableStateOf(false) }
     
     val scope = rememberCoroutineScope()
-    val arasaacService = remember { ArasaacService() }
+    
+    // Select Service based on library
+    val symbolService: SymbolService = remember(symbolLibrary) {
+        if (symbolLibrary == "MULBERRY") {
+            GlobalSymbolsService()
+        } else {
+            ArasaacService()
+        }
+    }
 
     fun performSearch() {
         if (searchQuery.text.isBlank()) return
@@ -64,7 +76,7 @@ fun SymbolSearchDialog(
         errorMessage = null
         scope.launch {
             try {
-                val list = arasaacService.searchPictograms(searchQuery.text, selectedLanguage)
+                val list = symbolService.search(searchQuery.text, selectedLanguage)
                 if (list.isEmpty()) {
                     errorMessage = "No symbols found."
                 }
@@ -78,7 +90,8 @@ fun SymbolSearchDialog(
     }
 
     LaunchedEffect(Unit) {
-        if (initialQuery.isNotBlank()) {
+        // Only auto-search if query is present
+        if (initialQuery.isNotBlank() && initialQuery.length > 2) { // minimal length check
             performSearch()
         }
     }
@@ -98,7 +111,7 @@ fun SymbolSearchDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Search Symbols", style = MaterialTheme.typography.titleLarge)
+                    Text("Search Symbols (${if(symbolLibrary=="MULBERRY") "Mulberry" else "Arasaac"})", style = MaterialTheme.typography.titleLarge)
                     
                     // Language Selector
                     Box {
@@ -168,24 +181,21 @@ fun SymbolSearchDialog(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(results) { item ->
-                                val url = arasaacService.getImageUrl(item._id)
-                                val label = item.keywords.firstOrNull()?.keyword ?: ""
-                                
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
-                                        .clickable { onSymbolSelected(url, label) }
+                                        .clickable { onSymbolSelected(item.url, item.label) } // Use SymbolResult properties
                                         .padding(8.dp)
                                 ) {
                                     AsyncImage(
-                                        model = url,
-                                        contentDescription = label,
+                                        model = item.url, // Use SymbolResult properties
+                                        contentDescription = item.label,
                                         modifier = Modifier.size(80.dp)
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = label,
+                                        text = item.label,
                                         style = MaterialTheme.typography.bodySmall,
                                         maxLines = 1
                                     )
@@ -198,3 +208,4 @@ fun SymbolSearchDialog(
         }
     }
 }
+

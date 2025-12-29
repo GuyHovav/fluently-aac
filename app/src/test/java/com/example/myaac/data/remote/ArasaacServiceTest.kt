@@ -1,26 +1,28 @@
 package com.example.myaac.data.remote
 
-import org.junit.Assert.assertEquals
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
+import org.junit.Assert.*
 
 class ArasaacServiceTest {
 
-    private val service = ArasaacService()
+    @Test
+    fun testSearchDog() = runBlocking {
+        val service = ArasaacService()
+        println("Searching for 'dog'...")
+        val results = service.search("dog", "en")
+        println("Results for 'dog': ${results.size}")
+        results.forEach { println(" - ${it.label} (${it.url})") }
+        assertTrue("Should return results for 'dog'", results.isNotEmpty())
+    }
 
     @Test
-    fun `getImageUrl returns correct URL format`() {
-        val id = 12345
-        val expectedUrl = "https://static.arasaac.org/pictograms/12345/12345_300.png"
-        
-        val result = service.getImageUrl(id)
-        
-        assertEquals(expectedUrl, result)
-    }
-    
-    @Test
-    fun `getImageUrl handles zero id`() {
-        val id = 0
-        val expectedUrl = "https://static.arasaac.org/pictograms/0/0_300.png"
-        assertEquals(expectedUrl, service.getImageUrl(id))
+    fun testSearchHotDog() = runBlocking {
+        val service = ArasaacService()
+        println("Searching for 'hot dog'...")
+        val results = service.search("hot dog", "en")
+        println("Results for 'hot dog': ${results.size}")
+        results.forEach { println(" - ${it.label} (${it.url})") }
+        assertTrue("Should return results for 'hot dog'", results.isNotEmpty())
     }
 }

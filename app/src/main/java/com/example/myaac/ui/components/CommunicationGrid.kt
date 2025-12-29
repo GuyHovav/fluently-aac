@@ -71,6 +71,9 @@ fun CommunicationGrid(
     onButtonLongPress: ((AacButton) -> Unit)? = null,
     onGrammarRequest: ((AacButton) -> Unit)? = null,
     onReorderFinished: ((List<AacButton>) -> Unit)? = null,
+    onPlaceholderLongPress: (() -> Unit)? = null,
+    onInteractionStart: () -> Unit = {},
+    onInteractionEnd: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // Local mutable state for optimistic updates
@@ -109,6 +112,19 @@ fun CommunicationGrid(
 
     // Reorderable state for drag and drop
     val lazyGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+
+    // Scroll interaction detection
+    LaunchedEffect(lazyGridState) {
+        androidx.compose.runtime.snapshotFlow { lazyGridState.isScrollInProgress }
+            .collect { isScrolling ->
+                if (isScrolling) {
+                    onInteractionStart()
+                } else {
+                    onInteractionEnd()
+                }
+            }
+    }
+
     val reorderableLazyGridState = sh.calvin.reorderable.rememberReorderableLazyGridState(lazyGridState) { from, to ->
         // Optimistic update
         if (isCaregiverMode && onReorderFinished != null) {
@@ -244,7 +260,12 @@ fun CommunicationGrid(
                             } else if (!isCaregiverMode && onGrammarRequest != null) {
                                 { onGrammarRequest(button) }
                             } else null
-                        } else null, 
+                        } else {
+                            // Enable long press for placeholder if callback provided
+                             if (isCaregiverMode && onPlaceholderLongPress != null) {
+                                 onPlaceholderLongPress
+                             } else null
+                        }, 
                         modifier = Modifier
                             .then(
                                 if (!isAddPlaceholder && isCaregiverMode && onReorderFinished != null) {
@@ -282,9 +303,9 @@ fun AacButtonView(
     val isPlaceholder = button.label.isEmpty() && button.iconPath.isNullOrEmpty()
     val visualAlpha = if (button.hidden) 0.5f else 1f
 
-    Box(
+    Column(
         modifier = modifier
-            .aspectRatio(1f)
+            .aspectRatio(1f / 1.5f)
             .scale(scale)
             .clip(RoundedCornerShape(16.dp))
             .background(baseColor)
@@ -309,13 +330,14 @@ fun AacButtonView(
                     )
                 }
             ),
-        contentAlignment = Alignment.Center
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
         // Content with alpha for hidden states
-        val contentModifier = Modifier.fillMaxSize().scale(if (button.hidden) 0.85f else 1f)
+        val symbolModifier = Modifier.weight(2.2f).scale(if (button.hidden) 0.85f else 1f)
         
-        Box(modifier = contentModifier) {
-            // 1. Image or Placeholder
+        // 1. Symbol Section (top part)
+        Box(modifier = symbolModifier) {
+            // Image or Placeholder
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -355,42 +377,7 @@ fun AacButtonView(
                  }
             }
 
-            // 2. Text Overlay
-            if (!isPlaceholder) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(
-                            androidx.compose.ui.graphics.Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
-                            )
-                        ),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    Text(
-                        text = button.label,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            shadow = Shadow(
-                                color = Color.Black.copy(alpha = visualAlpha),
-                                offset = Offset(3f, 3f),
-                                blurRadius = 3f
-                             )
-                        ),
-                        color = Color.White.copy(alpha = visualAlpha),
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .padding(bottom = 4.dp)
-                    )
-                }
-            }
-
-            // 3. Selection Indicator
+            // Selection Indicator
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
@@ -404,7 +391,7 @@ fun AacButtonView(
                 )
             }
             
-            // 4. Link Indicator
+            // Link Indicator
             if (button.action is com.example.myaac.model.ButtonAction.LinkToBoard) {
                 Box(
                     modifier = Modifier
@@ -420,6 +407,31 @@ fun AacButtonView(
                         modifier = Modifier.size(16.dp)
                     )
                 }
+            }
+        }
+
+        // 2. Text Label Section (bottom part)
+        if (!isPlaceholder) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Box(
+                modifier = Modifier
+                    .weight(1.2f)
+                    .fillMaxWidth()
+                    .background(Color.White.copy(alpha = 0.9f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = button.label,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    ),
+                    color = Color.Black.copy(alpha = visualAlpha),
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
+                )
             }
         }
     }

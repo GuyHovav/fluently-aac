@@ -140,6 +140,9 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
     implementation("com.google.accompanist:accompanist-permissions:0.35.0-alpha")
+    
+    // Splash Screen
+    implementation("androidx.core:core-splashscreen:1.0.1")
     // SimpleNLG for Grammar/Morphology
     implementation("uk.ac.abdn:SimpleNLG:4.5.0") {
         exclude(group = "gov.nih.nlm.nls.lexaccess")

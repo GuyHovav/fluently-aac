@@ -7,10 +7,20 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.myaac.model.Board
 
-@Database(entities = [Board::class], version = 3, exportSchema = false)
+@Database(
+    entities = [
+        Board::class,
+        WordFrequencyEntity::class,
+        WordBigramEntity::class,
+        WordTrigramEntity::class
+    ],
+    version = 4,
+    exportSchema = false
+)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun boardDao(): BoardDao
+    abstract fun wordFrequencyDao(): WordFrequencyDao
 
     companion object {
         @Volatile
