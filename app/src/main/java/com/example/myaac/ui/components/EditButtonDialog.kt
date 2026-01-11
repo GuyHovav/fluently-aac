@@ -24,6 +24,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -71,6 +73,7 @@ fun EditButtonDialog(
     // New state for auto-name dialog
     var showAutoNameDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showImageEditor by remember { mutableStateOf(false) }
     
     // Helper to crop
     fun cropBitmap(source: Bitmap, box: FloatArray): Bitmap {
@@ -233,6 +236,23 @@ fun EditButtonDialog(
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
+                        
+                        // Edit Overlay
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(4.dp)
+                                .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                .clickable { showImageEditor = true }
+                                .padding(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Edit Image",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     } else {
                         Icon(Icons.Default.Image, contentDescription = "Add Image", tint = Color.Gray)
                     }
@@ -546,5 +566,24 @@ fun EditButtonDialog(
                 }
             }
         )
+    }
+
+    if (showImageEditor && imageUri != null) {
+        val bitmap = uriToBitmap(imageUri!!)
+        if (bitmap != null) {
+            ImageEditorDialog(
+                bitmap = bitmap,
+                onDismiss = { showImageEditor = false },
+                onSave = { croppedBitmap ->
+                    // Save processed image
+                    val file = File(context.cacheDir, "cropped_${System.currentTimeMillis()}.png")
+                    FileOutputStream(file).use { out ->
+                        croppedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    }
+                    imageUri = Uri.fromFile(file)
+                    showImageEditor = false
+                }
+            )
+        }
     }
 }

@@ -6,12 +6,16 @@ import com.example.myaac.data.remote.GeminiService
 import com.example.myaac.data.repository.BoardRepository
 import com.example.myaac.data.repository.SettingsRepository
 import com.example.myaac.data.repository.PronunciationRepository
+import com.example.myaac.data.repository.AuthRepository
+import com.example.myaac.data.repository.CloudRepository
 
 class MyAacApplication : Application() {
     val database by lazy { AppDatabase.getDatabase(this) }
     val repository by lazy { BoardRepository(database.boardDao()) }
     val settingsRepository by lazy { SettingsRepository(this) }
     val pronunciationRepository by lazy { PronunciationRepository(this) }
+    val authRepository by lazy { AuthRepository() }
+    val cloudRepository by lazy { CloudRepository() }
     val morphologyService by lazy { com.example.myaac.data.nlp.MorphologyService() }
     
     // TODO: Move API Key to local.properties or secrets gradle plugin for security

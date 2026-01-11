@@ -15,16 +15,60 @@ import com.example.myaac.data.repository.SettingsRepository
 import com.example.myaac.data.model.DisabilityType
 import com.example.myaac.model.AppShortcut
 import com.example.myaac.ui.components.AppPickerDialog
+import com.example.myaac.data.repository.AuthRepository
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.FirebaseAuth
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.common.api.ApiException
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     repository: SettingsRepository,
-    onNavigateBack: () -> Unit
+    authRepository: AuthRepository,
+    onNavigateBack: () -> Unit,
+    onBackup: (String, (String) -> Unit) -> Unit,
+    onRestore: (String, (String) -> Unit) -> Unit
 ) {
     val settings by repository.settings.collectAsState()
+    val user by authRepository.authState.collectAsState(initial = authRepository.currentUser)
     val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Sign In Launcher
+    val signInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            if (account != null) {
+                // Firebase Auth with Google
+                scope.launch {
+                    val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+                    try {
+                        val authResult = FirebaseAuth.getInstance().signInWithCredential(credential).await()
+                        authResult.user?.let { firebaseUser ->
+                            authRepository.createUserProfileIfNew(firebaseUser)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        // Show error toast
+                    }
+                }
+            }
+        } catch (e: ApiException) {
+            e.printStackTrace()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -45,6 +89,94 @@ fun SettingsScreen(
                 .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
+
+            SettingsSection("Account") {
+                if (user == null) {
+                    Button(
+                        onClick = { 
+                            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                .requestIdToken(context.getString(com.example.myaac.R.string.default_web_client_id))
+                                .requestEmail()
+                                .build()
+                            val googleSignInClient = GoogleSignIn.getClient(context, gso)
+                            signInLauncher.launch(googleSignInClient.signInIntent)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Sign In with Google")
+                    }
+                    Text(
+                        "Sign in to backup your boards and share them across devices.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (user?.photoUrl != null) {
+                            coil.compose.AsyncImage(
+                                model = user!!.photoUrl,
+                                contentDescription = "Avatar",
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                        }
+                        Column {
+                            Text(user!!.displayName ?: "User", style = MaterialTheme.typography.titleMedium)
+                            Text(user!!.email ?: "", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(
+                        onClick = { authRepository.signOut() }
+                    ) {
+                        Text("Sign Out")
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Text("Cloud Sync", style = MaterialTheme.typography.titleSmall)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                user?.uid?.let { uid ->
+                                    val toast = android.widget.Toast.makeText(context, "Backing up...", android.widget.Toast.LENGTH_SHORT)
+                                    toast.show()
+                                    onBackup(uid) { result ->
+                                        // Show result (we need to trigger this on UI thread if callback is background, but standard Toast is fine usually or use LaunchedEffect if state changed)
+                                        // Since result is string, just show toast
+                                        android.widget.Toast.makeText(context, result, android.widget.Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Backup")
+                        }
+                        
+                        OutlinedButton(
+                            onClick = {
+                                user?.uid?.let { uid ->
+                                    val toast = android.widget.Toast.makeText(context, "Restoring...", android.widget.Toast.LENGTH_SHORT)
+                                    toast.show()
+                                    onRestore(uid) { result ->
+                                        android.widget.Toast.makeText(context, result, android.widget.Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Restore")
+                        }
+                    }
+                }
+            }
+
             SettingsSection("Display") {
                  // Symbol Library
                 Text("Symbol Library", style = MaterialTheme.typography.titleSmall)
@@ -127,11 +259,22 @@ fun SettingsScreen(
                 }
                 
                  Row(verticalAlignment = Alignment.CenterVertically) {
+                     Text("Show Symbols in Sentence Bar")
+                }
+
+                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
-                        checked = settings.showSymbolsInSentenceBar,
-                        onCheckedChange = { repository.setShowSymbolsInSentenceBar(it) }
+                        checked = settings.landscapeBigSentence,
+                        onCheckedChange = { repository.setLandscapeBigSentence(it) }
                     )
-                    Text("Show Symbols in Sentence Bar")
+                    Column {
+                        Text("Show Big Sentence in Landscape")
+                        Text(
+                            "Automatically expand the sentence when rotating to landscape mode",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
             }

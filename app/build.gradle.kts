@@ -5,6 +5,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp") version "1.9.20-1.0.14"
+    id("com.google.gms.google-services")
 }
 
 
@@ -34,6 +35,8 @@ android {
 
 
         buildConfigField("String", "GEMINI_API_KEY", "\"$apiKey\"")
+        buildConfigField("String", "GOOGLE_SEARCH_API_KEY", "\"${properties.getProperty("GOOGLE_SEARCH_API_KEY") ?: ""}\"")
+        buildConfigField("String", "GOOGLE_SEARCH_ENGINE_ID", "\"${properties.getProperty("GOOGLE_SEARCH_ENGINE_ID") ?: ""}\"")
         buildConfigField("boolean", "DEBUG_MODE", "true")  // Set to false for production
     }
 
@@ -75,6 +78,17 @@ android {
             excludes += "META-INF/ASL2.0"
             excludes += "META-INF/*.kotlin_module" 
         }
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+}
+
+tasks.withType<Test> {
+    testLogging {
+        events("standardOut", "started", "passed", "skipped", "failed")
+        showStandardStreams = true
     }
 }
 
@@ -149,4 +163,14 @@ dependencies {
         exclude(group = "javax.xml.bind")
         exclude(group = "com.sun.xml.bind")
     }
+
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:32.7.1"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-storage")
+    
+    // Google Sign-In
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
 }

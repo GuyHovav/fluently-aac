@@ -33,7 +33,9 @@ data class AppSettings(
     val showSymbolsInPredictions: Boolean = true,
     val learnFromUsage: Boolean = true,
     // Grammar settings
-    val autoGrammarCheck: Boolean = false
+    val autoGrammarCheck: Boolean = false,
+    // Display settings
+    val landscapeBigSentence: Boolean = true
 )
 
 class SettingsRepository(context: Context) {
@@ -81,7 +83,8 @@ class SettingsRepository(context: Context) {
             predictionCount = preferences.getInt(KEY_PREDICTION_COUNT, 5).coerceIn(3, 8),
             showSymbolsInPredictions = preferences.getBoolean(KEY_SHOW_SYMBOLS_IN_PREDICTIONS, true),
             learnFromUsage = preferences.getBoolean(KEY_LEARN_FROM_USAGE, true),
-            autoGrammarCheck = preferences.getBoolean(KEY_AUTO_GRAMMAR_CHECK, false)
+            autoGrammarCheck = preferences.getBoolean(KEY_AUTO_GRAMMAR_CHECK, false),
+            landscapeBigSentence = preferences.getBoolean(KEY_LANDSCAPE_BIG_SENTENCE, true)
         )
     }
     
@@ -128,6 +131,11 @@ class SettingsRepository(context: Context) {
     fun setShowSymbolsInSentenceBar(enabled: Boolean) {
         preferences.edit().putBoolean(KEY_SHOW_SYMBOLS_IN_SENTENCE, enabled).apply()
         _settings.value = _settings.value.copy(showSymbolsInSentenceBar = enabled)
+    }
+
+    fun setLandscapeBigSentence(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_LANDSCAPE_BIG_SENTENCE, enabled).apply()
+        _settings.value = _settings.value.copy(landscapeBigSentence = enabled)
     }
 
     fun setItemsToGenerate(count: Int) {
@@ -243,12 +251,13 @@ class SettingsRepository(context: Context) {
         private const val KEY_SHOW_HOME_ON_STARTUP = "show_home_on_startup"
         private const val KEY_HOME_BUTTONS = "home_buttons_json"
         private const val KEY_APP_SHORTCUTS = "app_shortcuts_json"
-        // Prediction keys
+        // Prediction settings
         private const val KEY_PREDICTION_ENABLED = "prediction_enabled"
         private const val KEY_AI_PREDICTION_ENABLED = "ai_prediction_enabled"
         private const val KEY_PREDICTION_COUNT = "prediction_count"
         private const val KEY_SHOW_SYMBOLS_IN_PREDICTIONS = "show_symbols_in_predictions"
         private const val KEY_LEARN_FROM_USAGE = "learn_from_usage"
         private const val KEY_AUTO_GRAMMAR_CHECK = "auto_grammar_check"
+        private const val KEY_LANDSCAPE_BIG_SENTENCE = "landscape_big_sentence"
     }
 }

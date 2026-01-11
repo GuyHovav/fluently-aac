@@ -246,21 +246,26 @@ class GeminiService(private val apiKey: String) {
     suspend fun predictNextWords(
         context: List<String>,
         count: Int = 5,
-        languageCode: String = "en"
+        languageCode: String = "en",
+        topic: String? = null
     ): List<String> {
         return withContext(Dispatchers.IO) {
             val languageName = if (languageCode == "iw" || languageCode == "he") "Hebrew" else "English"
             val contextText = context.takeLast(5).joinToString(" ")
+            val topicClause = if (!topic.isNullOrBlank()) {
+                "The current conversation topic/board is: '$topic'. Prioritize words related to this topic."
+            } else ""
             
             val prompt = """
                 You are helping with word prediction for an AAC (Augmentative and Alternative Communication) app.
                 
                 The user has typed: "$contextText"
+                $topicClause
                 
                 Predict the next $count words they might want to say in $languageName.
                 Focus on:
                 - Common conversational words
-                - Contextually relevant words
+                - Contextually relevant words (especially related to '$topic' if provided)
                 - Simple, everyday vocabulary
                 
                 Return ONLY the words, separated by commas.
@@ -283,12 +288,112 @@ class GeminiService(private val apiKey: String) {
     }
 
     // predictNextButtons removed
-    suspend fun generateBoard(topic: String, languageCode: String = "en", count: Int = 16): List<String> {
+
+    // Agent Actions
+    sealed class AgentAction {
+        data class CreateBoard(val topic: String, val negativeConstraints: String? = null) : AgentAction()
+        data class AnswerQuestion(val question: String) : AgentAction()
+        data class Unknown(val reason: String) : AgentAction()
+    }
+
+    suspend fun parseAgentCommand(query: String): AgentAction {
+        return withContext(Dispatchers.IO) {
+            val prompt = """
+                You are an AI assistant for an AAC app. Analyze the user's request and classify it into one of these actions:
+                
+                1. CREATE_BOARD: User wants to create a new symbol board.
+                   - Extract 'topic' (e.g., "nightclub", "food", "park")
+                   - Extract 'negative_constraints' if any (e.g., "no alcohol", "without meat"). Return "null" if none.
+                
+                2. ANSWER_QUESTION: User asks a question about the app or general help.
+                   - Extract the 'question'.
+
+                3. UNKNOWN: If the request is unclear or unrelated.
+
+                Response Format:
+                TYPE | param1 | param2
+                
+                Examples:
+                "Create a board about space" -> CREATE_BOARD | Space | null
+                "Make a board for a bar but no beer symbols" -> CREATE_BOARD | Bar | No beer symbols
+                "How do I use this app?" -> ANSWER_QUESTION | How do I use this app? | null
+                "Hello" -> ANSWER_QUESTION | Hello | null
+                
+                Input: "$query"
+                
+                Return ONLY the formatted string.
+            """.trimIndent()
+            
+            try {
+                val response = textModel.generateContent(prompt)
+                val text = response.text?.trim() ?: return@withContext AgentAction.Unknown("Empty response")
+                
+                val parts = text.split("|").map { it.trim() }
+                when (parts[0].uppercase()) {
+                    "CREATE_BOARD" -> {
+                        val topic = parts.getOrNull(1) ?: "General"
+                        val constraints = parts.getOrNull(2).takeIf { it != "null" && it != "None" }
+                        AgentAction.CreateBoard(topic, constraints)
+                    }
+                    "ANSWER_QUESTION" -> {
+                        val question = parts.getOrNull(1) ?: query
+                        AgentAction.AnswerQuestion(question)
+                    }
+                    else -> AgentAction.Unknown(text)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                AgentAction.Unknown("Error: ${e.message}")
+            }
+        }
+    }
+
+    suspend fun answerQuestion(question: String): String {
+        return withContext(Dispatchers.IO) {
+            // Simplified Knowledge Base
+            val knowledgeBase = """
+                You are 'Fluently', a helpful AI assistant built into an AAC (Augmentative and Alternative Communication) app.
+                
+                App Features:
+                - Create Boards: Users can create custom boards by typing a topic (e.g., "Create board for school").
+                - Magic Boards: The app uses AI to generate relevant vocabulary.
+                - Photo Boards: Users can take a photo to generate a board based on the scene (using the camera icon).
+                - Text-to-Speech: Tapping icons speaks the word.
+                - Validation: You can validate the query against app capabilities.
+                
+                Style:
+                - Be concise, helpful, and friendly.
+                - Keep answers short (under 3 sentences) as users may have reading difficulties.
+            """.trimIndent()
+            
+            val prompt = """
+                $knowledgeBase
+                
+                User Question: "$question"
+                
+                Answer:
+            """.trimIndent()
+            
+            try {
+                val response = textModel.generateContent(prompt)
+                response.text?.trim() ?: "I couldn't generate an answer."
+            } catch (e: Exception) {
+                 "Sorry, I'm having trouble connecting right now."
+            }
+        }
+    }
+
+    suspend fun generateBoard(topic: String, languageCode: String = "en", count: Int = 16, negativeConstraints: String? = null): List<String> {
         return withContext(Dispatchers.IO) {
             val languageName = if (languageCode == "iw" || languageCode == "he") "Hebrew" else "English"
+            val constraintsClause = if (!negativeConstraints.isNullOrBlank()) {
+                "CRITICAL INSTRUCTION: Do NOT include any words related to: $negativeConstraints."
+            } else ""
+            
             val prompt = """
                 Create a list of $count vocabulary words related to the topic '$topic' for an AAC communication board.
                 Includes nouns, verbs, and adjectives.
+                $constraintsClause
                 Output the words in $languageName.
                 Return ONLY the words, separated by commas.
                 Example: Dog, Cat, Pet, Walk, Furry, Bark
@@ -385,8 +490,18 @@ class GeminiService(private val apiKey: String) {
         }
     }
 
-    suspend fun correctGrammar(sentence: String, languageCode: String = "en"): String {
+    suspend fun correctGrammar(sentence: String, languageCode: String = "en", cacheService: com.example.myaac.data.cache.PhraseCacheService? = null): String {
         return withContext(Dispatchers.IO) {
+            // Try cache first if available
+            if (cacheService != null) {
+                val cached = cacheService.getCachedGrammar(sentence, languageCode)
+                if (cached != null) {
+                    android.util.Log.d("GeminiService", "✓ Grammar cache HIT for: ${sentence.take(50)}")
+                    return@withContext cached
+                }
+                android.util.Log.d("GeminiService", "✗ Grammar cache MISS, calling Gemini API...")
+            }
+            
             val languageName = if (languageCode == "iw" || languageCode == "he") "Hebrew" else "English"
             val prompt = """
                 Fix the grammar of this sentence in $languageName.
@@ -398,7 +513,15 @@ class GeminiService(private val apiKey: String) {
 
             try {
                 val response = textModel.generateContent(prompt)
-                response.text?.trim() ?: sentence
+                val corrected = response.text?.trim() ?: sentence
+                
+                // Cache the result if available and different from input
+                if (cacheService != null && corrected != sentence) {
+                    cacheService.cacheGrammar(sentence, corrected, languageCode)
+                    android.util.Log.d("GeminiService", "✓ Cached grammar correction")
+                }
+                
+                corrected
             } catch (e: Exception) {
                 e.printStackTrace()
                 sentence

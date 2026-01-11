@@ -28,12 +28,22 @@ class BoardViewModelTest {
     private lateinit var arasaacService: ArasaacService
     private lateinit var viewModel: BoardViewModel
 
+    private lateinit var application: android.app.Application
+
     @Before
     fun setup() {
+        application = mock()
         repository = mock()
         geminiService = mock()
         arasaacService = mock()
         settingsRepository = mock()
+        
+        // Mock resources for getString calls
+        val resources = mock<android.content.res.Resources>()
+        whenever(application.resources).thenReturn(resources)
+        val config = mock<android.content.res.Configuration>()
+        whenever(resources.configuration).thenReturn(config)
+        whenever(application.createConfigurationContext(any())).thenReturn(application) // Simplified
         
         // Mock settings flow
         val settingsFlow = kotlinx.coroutines.flow.MutableStateFlow(
@@ -42,7 +52,8 @@ class BoardViewModelTest {
         whenever(settingsRepository.settings).thenReturn(settingsFlow)
         
         // Initialize ViewModel with mocks
-        viewModel = BoardViewModel(repository, settingsRepository, geminiService, arasaacService)
+        // Note: ArasaacService is no longer injected in constructor
+        viewModel = BoardViewModel(application, repository, settingsRepository, null, geminiService)
         // Clear invocations from init block
         clearInvocations(repository)
     }

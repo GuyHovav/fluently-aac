@@ -1,12 +1,14 @@
 Configuration on demand is an incubating feature.
-> Task :app:checkKotlinGradlePluginConfigurationErrors
 > Task :app:preBuild UP-TO-DATE
 > Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors
 > Task :app:generateDebugBuildConfig UP-TO-DATE
 > Task :app:checkDebugAarMetadata UP-TO-DATE
 > Task :app:processDebugNavigationResources UP-TO-DATE
 > Task :app:compileDebugNavigationResources UP-TO-DATE
 > Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:processDebugGoogleServices UP-TO-DATE
 > Task :app:mapDebugSourceSetPaths UP-TO-DATE
 > Task :app:generateDebugResources UP-TO-DATE
 > Task :app:mergeDebugResources UP-TO-DATE
@@ -18,29 +20,39 @@ Configuration on demand is an incubating feature.
 > Task :app:processDebugManifest UP-TO-DATE
 > Task :app:processDebugManifestForPackage UP-TO-DATE
 > Task :app:processDebugResources UP-TO-DATE
-> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :app:kspDebugKotlin
 
 > Task :app:compileDebugKotlin FAILED
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/viewmodel/BoardViewModel.kt:884:43 Unresolved reference: value
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/viewmodel/BoardViewModel.kt:886:23 Unresolved reference: it
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/viewmodel/BoardViewModel.kt:887:27 Cannot infer a type for this parameter. Please specify it explicitly.
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/viewmodel/BoardViewModel.kt:887:34 Cannot infer a type for this parameter. Please specify it explicitly.
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/viewmodel/BoardViewModel.kt:889:67 Overload resolution ambiguity: 
-public final operator fun plus(other: Byte): Int defined in kotlin.Int
-public final operator fun plus(other: Double): Double defined in kotlin.Int
-public final operator fun plus(other: Float): Float defined in kotlin.Int
-public final operator fun plus(other: Int): Int defined in kotlin.Int
-public final operator fun plus(other: Long): Long defined in kotlin.Int
-public final operator fun plus(other: Short): Int defined in kotlin.Int
-e: file:///C:/dev/MyAAC/app/src/main/java/com/example/myaac/viewmodel/BoardViewModel.kt:898:72 Overload resolution ambiguity: 
-public operator fun <T> Collection<TypeVariable(T)>.plus(elements: Array<out TypeVariable(T)>): List<TypeVariable(T)> defined in kotlin.collections
-public operator fun <T> Collection<TypeVariable(T)>.plus(elements: Iterable<TypeVariable(T)>): List<TypeVariable(T)> defined in kotlin.collections
-public operator fun <T> Collection<TypeVariable(T)>.plus(elements: Sequence<TypeVariable(T)>): List<TypeVariable(T)> defined in kotlin.collections
-public operator fun <T> Iterable<TypeVariable(T)>.plus(elements: Array<out TypeVariable(T)>): List<TypeVariable(T)> defined in kotlin.collections
-public operator fun <T> Iterable<TypeVariable(T)>.plus(elements: Iterable<TypeVariable(T)>): List<TypeVariable(T)> defined in kotlin.collections
-public operator fun <T> Iterable<TypeVariable(T)>.plus(elements: Sequence<TypeVariable(T)>): List<TypeVariable(T)> defined in kotlin.collections
+e: file:///E:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/ImageEditorDialog.kt:63:26 Unresolved reference: onGloballyPositioned
+e: file:///E:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/ImageEditorDialog.kt:63:49 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///E:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/ImageEditorDialog.kt:67:46 Overload resolution ambiguity: 
+public inline fun min(a: Double, b: Double): Double defined in kotlin.math
+public inline fun min(a: Float, b: Float): Float defined in kotlin.math
+public inline fun min(a: Int, b: Int): Int defined in kotlin.math
+public inline fun min(a: Long, b: Long): Long defined in kotlin.math
+public inline fun min(a: UInt, b: UInt): UInt defined in kotlin.math
+public inline fun min(a: ULong, b: ULong): ULong defined in kotlin.math
+e: file:///E:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/ImageEditorDialog.kt:77:29 Unresolved reference. None of the following candidates is applicable because of receiver type mismatch: 
+public suspend fun PointerInputScope.detectTransformGestures(panZoomLock: Boolean = ..., onGesture: (centroid: Offset, pan: Offset, zoom: Float, rotation: Float) -> Unit): Unit defined in androidx.compose.foundation.gestures
+e: file:///E:/dev/MyAAC/app/src/main/java/com/example/myaac/ui/components/ImageEditorDialog.kt:226:19 Unresolved reference: sy
 
-[Incubating] Problems report is available at: file:///C:/dev/MyAAC/build/reports/problems/problems-report.html
+[Incubating] Problems report is available at: file:///E:/dev/MyAAC/build/reports/problems/problems-report.html
 
 FAILURE: Build failed with an exception.
 
@@ -61,5 +73,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.0-milestone-1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 16s
-19 actionable tasks: 2 executed, 17 up-to-date
+BUILD FAILED in 2s
+34 actionable tasks: 3 executed, 31 up-to-date

@@ -26,6 +26,8 @@ import com.example.myaac.data.remote.SymbolResult
 import com.example.myaac.data.remote.SymbolService
 import com.example.myaac.data.remote.ArasaacService
 import com.example.myaac.data.remote.GlobalSymbolsService
+import com.example.myaac.data.remote.CompositeSymbolService
+import com.example.myaac.data.remote.GoogleImageService
 import kotlinx.coroutines.launch
 
 @Composable
@@ -61,13 +63,31 @@ fun SymbolSearchDialog(
     
     val scope = rememberCoroutineScope()
     
-    // Select Service based on library
+    // Create composite service with fallback
+    // Primary service is based on symbolLibrary preference, secondary is the other one
     val symbolService: SymbolService = remember(symbolLibrary) {
-        if (symbolLibrary == "MULBERRY") {
-            GlobalSymbolsService()
+        val services = if (symbolLibrary == "MULBERRY") {
+            listOf(
+                GlobalSymbolsService("mulberry"),
+                ArasaacService(),
+                GoogleImageService()
+            )
         } else {
-            ArasaacService()
+            // ARASAAC: Try direct, then via Global Symbols, then fallback to Mulberry, then Google
+            listOf(
+                ArasaacService(),
+                GlobalSymbolsService("arasaac"), 
+                GlobalSymbolsService("mulberry"),
+                GoogleImageService()
+            )
         }
+        
+        // Create composite service with fallback
+        CompositeSymbolService(
+            services = services,
+            combineResults = false,
+            minRequiredResults = 2
+        )
     }
 
     fun performSearch() {
@@ -111,7 +131,7 @@ fun SymbolSearchDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Search Symbols (${if(symbolLibrary=="MULBERRY") "Mulberry" else "Arasaac"})", style = MaterialTheme.typography.titleLarge)
+                    Text("Search Symbols (${if(symbolLibrary=="MULBERRY") "Mulberry → Arasaac" else "Arasaac → Mulberry"})", style = MaterialTheme.typography.titleLarge)
                     
                     // Language Selector
                     Box {

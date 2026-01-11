@@ -32,7 +32,29 @@ open class ArasaacService : SymbolService {
         "kind" to 34166, // Kind/nice person
         "saw" to 5858,   // Verb "see" (past) instead of tool
         "well" to 34166, // Good/Well
-        "mine" to 33744  // Possessive
+        "mine" to 33744, // Possessive
+        // Pronouns
+        "i" to 6632,
+        "you" to 6625,
+        "we" to 7185,
+        "they" to 7032,
+        "he" to 6480,
+        "she" to 7028,
+        // Core Verbs
+        "want" to 5441,
+        "need" to 37160,
+        "feel" to 30197,
+        "have" to 32761,
+        "go" to 8142,
+        // Questions
+        "what" to 22620,
+        "where" to 7764,
+        "when" to 32874,
+        "why" to 36719,
+        // Be verbs if needed
+        "am" to 26521, // Reuse 'can/ability' or find better
+        "is" to 26521,
+        "are" to 26521
     )
 
     open suspend fun searchPictograms(query: String, locale: String = "en"): List<ArasaacPictogram> {

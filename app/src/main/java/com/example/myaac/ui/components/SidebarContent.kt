@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Slider
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
@@ -67,6 +68,7 @@ import com.example.myaac.model.Board
 import com.example.myaac.R
 import androidx.compose.ui.layout.ContentScale
 import kotlinx.coroutines.launch
+import com.example.myaac.util.WindowSizeClass
 
 @Composable
 fun SidebarContent(
@@ -83,7 +85,9 @@ fun SidebarContent(
     onOpenSettings: () -> Unit,
     onCreateVisualScene: (String, Bitmap, android.net.Uri) -> Unit,
     onCreateQuickBoard: (String, List<Bitmap>) -> Unit,
-    onSuggestBoardName: suspend (List<Bitmap>) -> String = { _ -> "" } // Default empty logic for preview/compat
+    onSuggestBoardName: suspend (List<Bitmap>) -> String = { _ -> "" },
+    isPermanent: Boolean = false,
+    windowSizeClass: com.example.myaac.util.WindowSizeClass? = null
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     var showCreateMenu by remember { mutableStateOf(false) }
@@ -173,7 +177,7 @@ fun SidebarContent(
         )
     }
 
-    ModalDrawerSheet {
+    val content: @Composable () -> Unit = {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(stringResource(R.string.boards), style = MaterialTheme.typography.titleLarge)
             if (isCaregiverMode) {
@@ -218,112 +222,123 @@ fun SidebarContent(
                     }
                 }
             }
-        }
-        if (showQuickBoardDialog) {
-            QuickBoardDialog(
-                existingBoards = boards,
-                onDismiss = { showQuickBoardDialog = false },
-                onCreate = { name, bitmaps ->
-                    onCreateQuickBoard(name, bitmaps)
-                    showQuickBoardDialog = false
-                },
-                onOpenExistingBoard = { board ->
-                    onBoardSelect(board)
-                },
-                onSuggestName = onSuggestBoardName
-            )
-        }
-        if (showVisualSceneDialog) {
-            VisualSceneDialog(
-                existingBoards = boards,
-                onDismiss = { showVisualSceneDialog = false },
-                onCreate = { name, bitmap, uri ->
-                    onCreateVisualScene(name, bitmap, uri)
-                    showVisualSceneDialog = false
-                },
-                onOpenExistingBoard = { board ->
-                    onBoardSelect(board)
-                }
-            )
-        }
-        Divider()
-        val visibleBoards = remember(boards, isCaregiverMode) {
-            if (isCaregiverMode) {
-                boards
-            } else {
-                boards.filter { board ->
-                    board.id == "home" || board.buttons.any { button ->
-                        !button.hidden && (button.label.isNotEmpty() || !button.iconPath.isNullOrEmpty())
+        
+            if (showQuickBoardDialog) {
+                QuickBoardDialog(
+                    existingBoards = boards,
+                    onDismiss = { showQuickBoardDialog = false },
+                    onCreate = { name, bitmaps ->
+                        onCreateQuickBoard(name, bitmaps)
+                        showQuickBoardDialog = false
+                    },
+                    onOpenExistingBoard = { board ->
+                        onBoardSelect(board)
+                    },
+                    onSuggestName = onSuggestBoardName
+                )
+            }
+            if (showVisualSceneDialog) {
+                VisualSceneDialog(
+                    existingBoards = boards,
+                    onDismiss = { showVisualSceneDialog = false },
+                    onCreate = { name, bitmap, uri ->
+                        onCreateVisualScene(name, bitmap, uri)
+                        showVisualSceneDialog = false
+                    },
+                    onOpenExistingBoard = { board ->
+                        onBoardSelect(board)
+                    }
+                )
+            }
+            Divider()
+            val visibleBoards = remember(boards, isCaregiverMode) {
+                if (isCaregiverMode) {
+                    boards
+                } else {
+                    boards.filter { board ->
+                        board.id == "home" || board.buttons.any { button ->
+                            !button.hidden && (button.label.isNotEmpty() || !button.iconPath.isNullOrEmpty())
+                        }
                     }
                 }
             }
-        }
 
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            items(visibleBoards) { board ->
-                NavigationDrawerItem(
-                    label = { Text(board.name) },
-                    selected = board.id == currentBoardId,
-                    onClick = { onBoardSelect(board) },
-                    icon = {
-                        if (!board.iconPath.isNullOrEmpty()) {
-                             AsyncImage(
-                                model = board.iconPath,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(Icons.Default.Folder, contentDescription = null)
-                        }
-                    },
-                    badge = {
-                if (isCaregiverMode) {
-                    androidx.compose.material3.IconButton(onClick = { boardToEdit = board }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-    }
-}
-        
-        Divider()
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (isCaregiverMode) {
-                // Settings button
-                OutlinedButton(
-                    onClick = onOpenSettings,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Settings, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.settings))
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(visibleBoards) { board ->
+                    NavigationDrawerItem(
+                        label = { Text(board.name) },
+                        selected = board.id == currentBoardId,
+                        onClick = { onBoardSelect(board) },
+                        icon = {
+                            if (!board.iconPath.isNullOrEmpty()) {
+                                 AsyncImage(
+                                    model = board.iconPath,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(Icons.Default.Folder, contentDescription = null)
+                            }
+                        },
+                        badge = {
+                            if (isCaregiverMode) {
+                                androidx.compose.material3.IconButton(onClick = { boardToEdit = board }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        },
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
                 }
             }
             
-            if (isCaregiverMode) {
-                 Button(
-                    onClick = { onLock() },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                ) {
-                    Text(stringResource(R.string.exit_admin_mode))
+            Divider()
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (isCaregiverMode) {
+                    // Settings button
+                    OutlinedButton(
+                        onClick = onOpenSettings,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.settings))
+                    }
                 }
-            } else {
-                TextButton(
-                    onClick = { showPinDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.enter_admin_mode))
+                
+                if (isCaregiverMode) {
+                     Button(
+                        onClick = { onLock() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Text(stringResource(R.string.exit_admin_mode))
+                    }
+                } else {
+                    TextButton(
+                        onClick = { showPinDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.enter_admin_mode))
+                    }
                 }
             }
+        }
+    }
+
+    if (isPermanent) {
+        // For permanent sidebar, just show content (parent handles surface/sizing)
+        content()
+    } else {
+        // For drawer, wrap in ModalDrawerSheet
+        ModalDrawerSheet {
+            content()
         }
     }
 }
@@ -396,7 +411,19 @@ fun CreateBoardDialog(
                     onValueChange = { topic = it },
                     label = { Text(stringResource(R.string.topic_optional)) },
                     placeholder = { Text(stringResource(R.string.topic_hint)) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        androidx.compose.material3.IconButton(
+                            onClick = { topic = name },
+                            enabled = name.isNotBlank()
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.ContentCopy,
+                                contentDescription = "Copy Name to Topic",
+                                tint = if (name.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                            )
+                        }
+                    }
                 )
                 if (topic.isNotBlank()) {
                      Text(

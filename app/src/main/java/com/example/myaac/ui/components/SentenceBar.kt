@@ -2,6 +2,7 @@ package com.example.myaac.ui.components
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import com.example.myaac.util.isTablet
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -63,10 +64,13 @@ fun SentenceBar(
     onPredictionClick: (String) -> Unit = {},
     allowPredictionStrip: Boolean = true,
     onGrammarCheck: () -> Unit = {},
+    windowSizeClass: com.example.myaac.util.WindowSizeClass? = null,
+    landscapeBigSentence: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val isTablet = windowSizeClass?.isTablet() ?: false
     
     val displayedText = remember(sentence, languageCode) {
         val words = sentence.map { it.textToSpeak }
@@ -90,8 +94,8 @@ fun SentenceBar(
     }
 
     // Trigger expanded view on tilt (landscape)
-    androidx.compose.runtime.LaunchedEffect(isLandscape, sentence.isNotEmpty()) {
-        if (isLandscape && sentence.isNotEmpty()) {
+    androidx.compose.runtime.LaunchedEffect(isLandscape, sentence.isNotEmpty(), landscapeBigSentence) {
+        if (isLandscape && sentence.isNotEmpty() && landscapeBigSentence) {
             isExpanded = true
         }
     }
@@ -104,11 +108,15 @@ fun SentenceBar(
     }
 
     // Dynamic Sizing: Shrink items if there are many.
-    // Reduced base size from 60dp to 48dp for more compact layout
+    // Tablet: Start at 80dp, shrink to 60dp
+    // Phone: Start at 48dp, shrink to 36dp
+    val baseSize = if (isTablet) 80.dp else 48.dp
+    val minSize = if (isTablet) 60.dp else 36.dp
+    
     val itemSize = if (sentence.size > 6) {
-        maxOf(36.dp, 48.dp - ((sentence.size - 6) * 3).dp)
+        maxOf(minSize, baseSize - ((sentence.size - 6) * 3).dp)
     } else {
-        48.dp
+        baseSize
     }
 
     Surface(
@@ -155,15 +163,14 @@ fun SentenceBar(
                         )
                     } else {
                         if (showSymbols) {
-                            @OptIn(ExperimentalLayoutApi::class)
-                            FlowRow(
+                            // Vertical layout for sentence buttons
+                            androidx.compose.foundation.lazy.LazyColumn(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                sentence.forEach { button ->
+                                items(sentence) { button ->
                                     SentenceBarItem(
                                         button = button,
                                         size = itemSize
@@ -346,11 +353,12 @@ fun SentenceBarItem(
 
     Box(
         modifier = modifier
-            .size(size) 
+            .fillMaxWidth()
+            .height(size) 
             .clip(RoundedCornerShape(8.dp))
             .background(baseColor)
             .border(1.dp, Color.Black.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.CenterStart
     ) {
         // Background Image
         if (!button.iconPath.isNullOrEmpty()) {
@@ -365,9 +373,9 @@ fun SentenceBarItem(
         // Text Overlay
         Box(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.BottomCenter
+                .align(Alignment.CenterStart)
+                .padding(start = 8.dp),
+            contentAlignment = Alignment.CenterStart
         ) {
             Text(
                 text = button.label,
@@ -381,7 +389,7 @@ fun SentenceBarItem(
                     )
                 ),
                 color = Color.White,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Start,
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 modifier = Modifier.padding(2.dp)

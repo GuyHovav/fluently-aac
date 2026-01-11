@@ -12,15 +12,17 @@ import com.example.myaac.model.Board
         Board::class,
         WordFrequencyEntity::class,
         WordBigramEntity::class,
-        WordTrigramEntity::class
+        WordTrigramEntity::class,
+        PhraseCacheEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun boardDao(): BoardDao
     abstract fun wordFrequencyDao(): WordFrequencyDao
+    abstract fun phraseCacheDao(): PhraseCacheDao
 
     companion object {
         @Volatile

@@ -12,14 +12,40 @@ class LocalPredictionEngine(
     private val wordFrequencyDao: WordFrequencyDao
 ) : PredictionEngine {
     
-    // Default common words to use when there's no learned data
+    // Default core vocabulary words (120+ words) to use when there's no learned data
+    // Ordered loosely by frequency and category
     private val defaultCommonWords = listOf(
-        "I", "you", "want", "need", "like", "have", "go", "see", "feel", "think",
-        "yes", "no", "please", "thank", "help", "more", "stop", "good", "bad",
-        "happy", "sad", "eat", "drink", "play", "sleep", "home", "school", "work"
+        // Pronouns
+        "I", "you", "he", "she", "we", "they", "it", "this", "that", "me", "my", "your",
+        
+        // Verbs
+        "want", "need", "like", "love", "have", "has", "get", "got", "go", "come", 
+        "can", "do", "did", "see", "look", "watch", "eat", "drink", "play", "sleep", 
+        "help", "stop", "start", "make", "put", "give", "take", "feel", "think", 
+        "know", "say", "tell", "ask", "turn", "open", "close", "move", "read", "write", "use",
+        
+        // Social / Courtesy
+        "yes", "no", "please", "thank", "sorry", "excuse", "hello", "goodbye", "welcome", "ok",
+        
+        // Question Words
+        "what", "where", "when", "who", "why", "how", "which",
+        
+        // Adjectives
+        "good", "bad", "happy", "sad", "big", "small", "hot", "cold", "fast", "slow", 
+        "more", "less", "same", "different", "nice", "fun", "hard", "easy", "new", "old",
+        
+        // Prepositions
+        "in", "on", "at", "to", "from", "with", "for", "up", "down", "out", "off", 
+        "over", "under", "beside", "between",
+        
+        // Time
+        "now", "today", "tomorrow", "yesterday", "later", "soon", "morning", "night", "always", "never",
+        
+        // Places
+        "home", "school", "work", "hospital", "store", "park", "here", "there"
     )
     
-    override suspend fun predict(context: List<String>, count: Int): List<String> = withContext(Dispatchers.IO) {
+    override suspend fun predict(context: List<String>, count: Int, topic: String?): List<String> = withContext(Dispatchers.IO) {
         val predictions = mutableSetOf<String>() // Use set to avoid duplicates
         
         // Normalize context (lowercase, trim)

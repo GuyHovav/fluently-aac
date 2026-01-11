@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -46,11 +48,15 @@ import com.example.myaac.model.ButtonAction
 import com.example.myaac.ui.components.CommunicationGrid
 import com.example.myaac.ui.components.SentenceBar
 import com.example.myaac.ui.components.GenerateItemsDialog
+import com.example.myaac.ui.components.AgentDialog
 import com.example.myaac.ui.theme.MyAACTheme
 import com.example.myaac.viewmodel.BoardViewModel
 import com.example.myaac.ui.SettingsScreen
 import com.example.myaac.ui.PronunciationManagementScreen
 import com.example.myaac.data.repository.AppSettings
+import com.example.myaac.util.rememberWindowSizeClass
+import com.example.myaac.util.shouldUsePermanentSidebar
+import com.example.myaac.util.getSidebarWidth
 import java.util.Locale
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
@@ -132,6 +138,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val app = context.applicationContext as com.example.myaac.MyAacApplication
                 val geminiService = app.geminiService
+                val mainViewModel: BoardViewModel = viewModel(factory = BoardViewModel.Factory)
 
                 when {
                     showPronunciationManagement -> {
@@ -142,11 +149,15 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                     showSettings -> {
                         SettingsScreen(
                             repository = settingsRepository,
-                            onNavigateBack = { showSettings = false }
+                            authRepository = app.authRepository,
+                            onNavigateBack = { showSettings = false },
+                            onBackup = mainViewModel::backupToCloud,
+                            onRestore = mainViewModel::restoreFromCloud
                         )
                     }
                     else -> {
                         MainScreen(
+                            viewModel = mainViewModel,
                             onSpeak = { text -> speak(text, settings.ttsRate) },
                             onOpenSettings = { showSettings = true },
                             textScale = settings.textScale,
@@ -213,6 +224,9 @@ fun MainScreen(
     val uiState by viewModel.uiState.collectAsState()
     val allBoards by viewModel.allBoards.collectAsState(initial = emptyList())
     
+    // Get window size class for responsive layout
+    val windowSizeClass = rememberWindowSizeClass()
+    val usePermanentSidebar = windowSizeClass.shouldUsePermanentSidebar()
 
     var buttonToEdit by remember { mutableStateOf<com.example.myaac.model.AacButton?>(null) }
     
@@ -239,10 +253,15 @@ fun MainScreen(
 
     // Symbol Generation Dialog
     var showGenerateItemsDialog by remember { mutableStateOf(false) }
+
+    // Agent Dialog
+    var showAgentDialog by remember { mutableStateOf(false) }
     
     // Back Handler
     androidx.activity.compose.BackHandler(enabled = true) {
-        if (uiState.currentBoard?.id == "home" && !viewModel.canNavigateBack) {
+        if (drawerState.isOpen) {
+             scope.launch { drawerState.close() }
+        } else if (uiState.currentBoard?.id == "home" && !viewModel.canNavigateBack) {
              showExitConfirmation = true
         } else if (viewModel.canNavigateBack) {
             viewModel.navigateBack()
@@ -485,6 +504,16 @@ fun MainScreen(
         )
     }
 
+    if (showAgentDialog) {
+        AgentDialog(
+            onDismiss = { showAgentDialog = false },
+            onSubmit = { query -> viewModel.submitAgentQuery(query) },
+            response = uiState.agentResponse,
+            isLoading = uiState.isAgentProcessing,
+            languageCode = languageCode
+        )
+    }
+
     if (buttonToEdit != null) {
         // ... (Edit Dialog Code remains same)
          com.example.myaac.ui.components.EditButtonDialog(
@@ -519,84 +548,257 @@ fun MainScreen(
         )
     }
 
-    androidx.compose.material3.ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            com.example.myaac.ui.components.SidebarContent(
-                boards = allBoards,
-                currentBoardId = uiState.currentBoard?.id ?: "",
-                isCaregiverMode = uiState.isCaregiverMode,
-                onBoardSelect = { board -> 
-                    viewModel.navigateToBoard(board.id)
-                    scope.launch { drawerState.close() }
-                },
-                onCreateBoard = { name, topic ->
-                    scope.launch {
-                        val newId = if (topic.isNotBlank()) {
-                             viewModel.createMagicBoard(name, topic)
-                        } else {
-                             viewModel.createNewBoard(name)
-                        }
-                        drawerState.close()
-                        // Trigger link prompt
-                        createdBoardIdForLink = newId
+    // Sidebar content composable (shared between drawer and permanent sidebar)
+    val sidebarContent: @Composable () -> Unit = {
+        com.example.myaac.ui.components.SidebarContent(
+            boards = allBoards,
+            currentBoardId = uiState.currentBoard?.id ?: "",
+            isCaregiverMode = uiState.isCaregiverMode,
+            isPermanent = usePermanentSidebar,
+            windowSizeClass = windowSizeClass,
+            onBoardSelect = { board -> 
+                viewModel.navigateToBoard(board.id)
+                scope.launch { drawerState.close() }
+            },
+            onCreateBoard = { name, topic ->
+                scope.launch {
+                    val newId = if (topic.isNotBlank()) {
+                         viewModel.createMagicBoard(name, topic)
+                    } else {
+                         viewModel.createNewBoard(name)
                     }
-                },
-                onDeleteBoard = { board ->
-                    viewModel.deleteBoard(board.id)
-                },
-                onUpdateBoard = { board ->
-                    viewModel.updateBoard(board)
-                },
-                onExpandBoard = { board, itemCount ->
-                     viewModel.expandBoard(board, itemCount)
-                     scope.launch { drawerState.close() }
-                },
-                onUnlock = { pin -> viewModel.unlockCaregiverMode(pin) },
-                onLock = { viewModel.lockCaregiverMode() },
-                onOpenSettings = { 
-                    scope.launch { drawerState.close() }
-                    onOpenSettings()
-                },
-                onCreateVisualScene = { name, bitmap, uri ->
-                    scope.launch {
-                        val newId = viewModel.createMagicScene(name, bitmap, uri)
-                        drawerState.close()
-                        if (newId.isNotEmpty()) {
-                             createdBoardIdForLink = newId
-                        }
-                    }
-                },
-                onCreateQuickBoard = { name, bitmaps ->
-                    scope.launch {
-                        val newId = viewModel.createQuickBoard(name, bitmaps)
-                        drawerState.close()
-                        if (newId.isNotEmpty()) {
-                             createdBoardIdForLink = newId
-                        }
-                    }
-                },
-                onSuggestBoardName = { bitmaps ->
-                    viewModel.suggestBoardName(bitmaps)
+                    drawerState.close()
+                    // Trigger link prompt
+                    createdBoardIdForLink = newId
                 }
+            },
+            onDeleteBoard = { board ->
+                viewModel.deleteBoard(board.id)
+            },
+            onUpdateBoard = { board ->
+                viewModel.updateBoard(board)
+            },
+            onExpandBoard = { board, itemCount ->
+                 viewModel.expandBoard(board, itemCount)
+                 scope.launch { drawerState.close() }
+            },
+            onUnlock = { pin -> viewModel.unlockCaregiverMode(pin) },
+            onLock = { viewModel.lockCaregiverMode() },
+            onOpenSettings = { 
+                scope.launch { drawerState.close() }
+                onOpenSettings()
+            },
+            onCreateVisualScene = { name, bitmap, uri ->
+                scope.launch {
+                    val newId = viewModel.createMagicScene(name, bitmap, uri)
+                    drawerState.close()
+                    if (newId.isNotEmpty()) {
+                         createdBoardIdForLink = newId
+                    }
+                }
+            },
+            onCreateQuickBoard = { name, bitmaps ->
+                scope.launch {
+                    val newId = viewModel.createQuickBoard(name, bitmaps)
+                    drawerState.close()
+                    if (newId.isNotEmpty()) {
+                         createdBoardIdForLink = newId
+                    }
+                }
+            },
+            onSuggestBoardName = { bitmaps ->
+                viewModel.suggestBoardName(bitmaps)
+            }
+        )
+    }
+
+    // Use different layouts based on screen size
+    if (usePermanentSidebar) {
+        // Tablet landscape: Two-pane layout with permanent sidebar
+        Row(modifier = Modifier.fillMaxSize()) {
+            // Permanent sidebar
+            Surface(
+                modifier = Modifier
+                    .width(windowSizeClass.getSidebarWidth())
+                    .fillMaxHeight(),
+                tonalElevation = 1.dp
+            ) {
+                sidebarContent()
+            }
+            
+            // Main content
+            MainContent(
+                viewModel = viewModel,
+                uiState = uiState,
+                allBoards = allBoards,
+                windowSizeClass = windowSizeClass,
+                onSpeak = onSpeak,
+                showHorizontalNavigation = showHorizontalNavigation,
+                showSymbolsInSentenceBar = showSymbolsInSentenceBar,
+                languageCode = languageCode,
+                symbolLibrary = symbolLibrary,
+                buttonToEdit = buttonToEdit,
+                onButtonToEdit = { buttonToEdit = it },
+                showGenerateItemsDialog = showGenerateItemsDialog,
+                onShowGenerateItemsDialog = { showGenerateItemsDialog = it },
+                geminiService = geminiService,
+                morphologyService = morphologyService,
+                grammarVariations = grammarVariations,
+                grammarBaseWord = grammarBaseWord,
+                onGrammarVariationsChange = { grammarVariations = it },
+                onGrammarBaseWordChange = { grammarBaseWord = it },
+                showMenuButton = false, // No menu button when sidebar is permanent
+                onMenuClick = {}
             )
         }
-    ) {
-        Scaffold(
-            topBar = {
-                // Add a small hamburger menu if needed, or just swipe
-                androidx.compose.material3.CenterAlignedTopAppBar(
-                    title = { Text(uiState.currentBoard?.name ?: "MyAAC") },
-                    navigationIcon = {
-                        androidx.compose.material3.IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Menu, contentDescription = stringResource(R.string.menu))
+    } else {
+        // Phone or tablet portrait: Use modal drawer
+        androidx.compose.material3.ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = { sidebarContent() }
+        ) {
+            MainContent(
+                viewModel = viewModel,
+                uiState = uiState,
+                allBoards = allBoards,
+                windowSizeClass = windowSizeClass,
+                onSpeak = onSpeak,
+                showHorizontalNavigation = showHorizontalNavigation,
+                showSymbolsInSentenceBar = showSymbolsInSentenceBar,
+                languageCode = languageCode,
+                symbolLibrary = symbolLibrary,
+                buttonToEdit = buttonToEdit,
+                onButtonToEdit = { buttonToEdit = it },
+                showGenerateItemsDialog = showGenerateItemsDialog,
+                onShowGenerateItemsDialog = { showGenerateItemsDialog = it },
+                geminiService = geminiService,
+                morphologyService = morphologyService,
+                grammarVariations = grammarVariations,
+                grammarBaseWord = grammarBaseWord,
+                onGrammarVariationsChange = { grammarVariations = it },
+                onGrammarBaseWordChange = { grammarBaseWord = it },
+                showMenuButton = true,
+                onMenuClick = { scope.launch { drawerState.open() } }
+            )
+        }
+    }
+
+    
+    if (grammarVariations != null) {
+        com.example.myaac.ui.components.GrammarPopup(
+            baseWord = grammarBaseWord,
+            variations = grammarVariations!!,
+            onDismiss = { grammarVariations = null },
+            onSelect = { variant ->
+                grammarVariations = null
+                // Add to sentence bar
+                val tempButton = com.example.myaac.model.AacButton(
+                    id = "grammar_${java.util.UUID.randomUUID()}",
+                    label = variant,
+                    speechText = variant,
+                    action = ButtonAction.Speak(variant)
+                )
+                viewModel.onButtonPress(tempButton)
+                onSpeak(variant)
+            }
+        )
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun MainContent(
+    viewModel: BoardViewModel,
+    uiState: com.example.myaac.viewmodel.BoardUiState,
+    allBoards: List<com.example.myaac.model.Board>,
+    windowSizeClass: com.example.myaac.util.WindowSizeClass,
+    onSpeak: (String) -> Unit,
+    showHorizontalNavigation: Boolean,
+    showSymbolsInSentenceBar: Boolean,
+    languageCode: String,
+    symbolLibrary: String,
+    buttonToEdit: com.example.myaac.model.AacButton?,
+    onButtonToEdit: (com.example.myaac.model.AacButton?) -> Unit,
+    showGenerateItemsDialog: Boolean,
+    onShowGenerateItemsDialog: (Boolean) -> Unit,
+    geminiService: com.example.myaac.data.remote.GeminiService?,
+    morphologyService: com.example.myaac.data.nlp.MorphologyService,
+    grammarVariations: List<String>?,
+    grammarBaseWord: String,
+    onGrammarVariationsChange: (List<String>?) -> Unit,
+    onGrammarBaseWordChange: (String) -> Unit,
+    showMenuButton: Boolean,
+    onMenuClick: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val app = context.applicationContext as com.example.myaac.MyAacApplication
+    
+    if (buttonToEdit != null) {  
+         com.example.myaac.ui.components.EditButtonDialog(
+            button = buttonToEdit,
+            allBoards = allBoards,
+            defaultLanguage = languageCode,
+            symbolLibrary = symbolLibrary,
+            onDismiss = { onButtonToEdit(null) },
+            onSave = { updatedButton ->
+                viewModel.updateButton(updatedButton)
+                onButtonToEdit(null)
+            },
+            onIdentifyItem = { bitmap ->
+                if (geminiService == null) {
+                    "Error: Gemini API not configured" to null
+                } else {
+                    try {
+                        geminiService.identifyItem(bitmap)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        "Error: ${e.localizedMessage}" to null
+                    }
+                }
+            },
+            onCheckSymbol = { query ->
+                viewModel.checkSymbol(query)
+            },
+            onDelete = {
+                viewModel.deleteButton(buttonToEdit.id)
+                onButtonToEdit(null)
+            }
+        )
+    }
+    
+    Scaffold(
+        topBar = {
+            // Add a small hamburger menu if needed, or just swipe
+            androidx.compose.material3.CenterAlignedTopAppBar(
+                title = { Text(uiState.currentBoard?.name ?: "MyAAC") },
+                navigationIcon = {
+                    if (showMenuButton) {
+                        androidx.compose.material3.IconButton(onClick = onMenuClick) {
+                            androidx.compose.material3.Icon(
+                                androidx.compose.material.icons.Icons.Default.Menu, 
+                                contentDescription = stringResource(R.string.menu)
+                            )
                         }
                     }
-                )
-            },
-            containerColor = MaterialTheme.colorScheme.background,
+                },
+                actions = {
+                    androidx.compose.material3.IconButton(onClick = { 
+                        onShowGenerateItemsDialog(false) // Reset any dialogs
+                        viewModel.clearAgentResponse()
+                    }) {
+                        androidx.compose.material3.Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.AutoAwesome, 
+                            contentDescription = "AI Assistant",
+                            tint = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+                }
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background,
 
-        ) { innerPadding ->
+    ) { innerPadding ->
             // ... Content
              Column(
                 modifier = Modifier
@@ -688,7 +890,9 @@ fun MainScreen(
                             viewModel.onPredictionSelected(word)
                         },
                         allowPredictionStrip = true,
-                        onGrammarCheck = { viewModel.applyPendingGrammarCorrection() }
+                        onGrammarCheck = { viewModel.applyPendingGrammarCorrection() },
+                        windowSizeClass = windowSizeClass,
+                        landscapeBigSentence = settings.landscapeBigSentence
                     )
                 }
 
@@ -704,7 +908,7 @@ fun MainScreen(
                                 isCaregiverMode = uiState.isCaregiverMode,
                                 onButtonClick = { button ->
                                     if (uiState.isCaregiverMode) {
-                                        buttonToEdit = button
+                                        onButtonToEdit(button)
                                     } else {
                                         viewModel.onButtonPress(button)
                                         if (button.action is ButtonAction.Speak) {
@@ -719,17 +923,14 @@ fun MainScreen(
                             // logic: if home board but dynamic buttons not ready, show mostly empty/loading
                             // to avoid "old board" flash.
                             val isHome = uiState.currentBoard?.id == "home"
-                            val displayButtons = if (isHome) {
-                                uiState.homeBoardButtons ?: emptyList() // Or waiting...
-                            } else {
-                                uiState.currentBoard?.buttons ?: emptyList()
-                            }
+                            val displayButtons = uiState.currentBoard?.buttons ?: emptyList()
 
                             CommunicationGrid(
                                 buttons = displayButtons,
                                 columns = uiState.currentBoard!!.columns,
                                 isCaregiverMode = uiState.isCaregiverMode,
                                 selectedButtonIds = uiState.selectedButtonIds,
+                                windowSizeClass = windowSizeClass,
                                 onButtonClick = { button ->
                                     if (uiState.isCaregiverMode) {
                                         // In selection mode, clicking toggles selection
@@ -737,7 +938,7 @@ fun MainScreen(
                                             viewModel.toggleButtonSelection(button.id)
                                         } else {
                                             // No items selected, open edit dialog
-                                            buttonToEdit = button
+                                            onButtonToEdit(button)
                                         }
                                     } else {
                                         viewModel.onButtonPress(button)
@@ -787,8 +988,8 @@ fun MainScreen(
                                         // Avaz shows popup even if empty-ish? No, if empty it shouldn't show.
                                         if (combined.isNotEmpty() && combined != listOf(word)) {
                                             with(androidx.compose.ui.platform.AndroidUiDispatcher.Main) { // Go back in UI thread
-                                                grammarBaseWord = word
-                                                grammarVariations = combined
+                                                onGrammarBaseWordChange(word)
+                                                onGrammarVariationsChange(combined)
                                             }
                                         } else {
                                              // Fallback: If no variations found, maybe speak or do nothing?
@@ -803,7 +1004,7 @@ fun MainScreen(
                                 } else null,
                                 onInteractionEnd = viewModel::onInteractionEnd,
                                 onPlaceholderLongPress = {
-                                    showGenerateItemsDialog = true
+                                    onShowGenerateItemsDialog(true)
                                 },
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -834,7 +1035,7 @@ fun MainScreen(
                                 val selectedId = uiState.selectedButtonIds.first()
                                 val button = uiState.currentBoard?.buttons?.find { it.id == selectedId }
                                 if (button != null) {
-                                    buttonToEdit = button
+                                    onButtonToEdit(button)
                                     viewModel.clearSelection()
                                 }
                             },
@@ -846,16 +1047,13 @@ fun MainScreen(
                 }
             }
         }
-    }
-
-    
     if (grammarVariations != null) {
         com.example.myaac.ui.components.GrammarPopup(
             baseWord = grammarBaseWord,
-            variations = grammarVariations!!,
-            onDismiss = { grammarVariations = null },
+            variations = grammarVariations,
+            onDismiss = { onGrammarVariationsChange(null) },
             onSelect = { variant ->
-                grammarVariations = null
+                onGrammarVariationsChange(null)
                 // Add to sentence bar
                 val tempButton = com.example.myaac.model.AacButton(
                     id = "grammar_${java.util.UUID.randomUUID()}",

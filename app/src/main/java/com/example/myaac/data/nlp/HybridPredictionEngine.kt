@@ -14,11 +14,11 @@ class HybridPredictionEngine(
     private val aiEnabled: Boolean = true
 ) : PredictionEngine {
     
-    override suspend fun predict(context: List<String>, count: Int): List<String> = coroutineScope {
+    override suspend fun predict(context: List<String>, count: Int, topic: String?): List<String> = coroutineScope {
         val predictions = mutableSetOf<String>()
         
         // Always get local predictions (fast, offline)
-        val localPredictions = localEngine.predict(context, count)
+        val localPredictions = localEngine.predict(context, count, topic)
         predictions.addAll(localPredictions)
         
         // Get AI predictions if enabled and available
@@ -27,7 +27,7 @@ class HybridPredictionEngine(
                 // Run AI predictions with timeout (don't block too long)
                 val aiPredictionsDeferred = async {
                     withTimeout(2000L) { // 2 second timeout
-                        aiEngine.predict(context, count)
+                        aiEngine.predict(context, count, topic)
                     }
                 }
                 
@@ -116,11 +116,20 @@ class HybridPredictionEngine(
         
         /**
          * Get common completions for a phrase
+         * @param boardNames Optional list of board names to suggest for location-related contexts
          */
-        fun getCompletionsForPhrase(phrase: String, languageCode: String = "en"): List<String> {
+        fun getCompletionsForPhrase(
+            phrase: String, 
+            languageCode: String = "en",
+            boardNames: List<String> = emptyList()
+        ): List<String> {
             val lowerPhrase = phrase.lowercase().trim()
             return when (languageCode) {
                 "en" -> when {
+                    // Location/destination contexts - suggest board names
+                    lowerPhrase.matches(Regex(".*(want to go|let'?s go to|going to|go to)$")) -> 
+                        boardNames.ifEmpty { listOf("the park", "school", "home", "the store") }
+                    
                     lowerPhrase.endsWith("i want") || lowerPhrase.endsWith("want") -> 
                         listOf("to", "water", "food", "help", "more", "go", "eat", "drink", "sleep", "play")
                     lowerPhrase.endsWith("i need") || lowerPhrase.endsWith("need") -> 
@@ -142,6 +151,10 @@ class HybridPredictionEngine(
                     else -> emptyList()
                 }
                 "iw" -> when {
+                    // Location/destination contexts - suggest board names
+                    lowerPhrase.matches(Regex(".*(הולך ל|נלך ל|רוצה ללכת ל|הולכים ל)$")) -> 
+                        boardNames.ifEmpty { listOf("הפארק", "בית ספר", "הבית", "החנות") }
+                    
                     lowerPhrase.endsWith("רוצה") -> 
                         listOf("ל", "מים", "אוכל", "עזרה", "עוד", "ללכת", "לאכול", "לשתות")
                     lowerPhrase.endsWith("צריך") -> 

@@ -58,6 +58,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
 import sh.calvin.reorderable.*
+import com.example.myaac.util.getRecommendedColumns
 
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -74,8 +75,15 @@ fun CommunicationGrid(
     onPlaceholderLongPress: (() -> Unit)? = null,
     onInteractionStart: () -> Unit = {},
     onInteractionEnd: () -> Unit = {},
+    windowSizeClass: com.example.myaac.util.WindowSizeClass? = null,
     modifier: Modifier = Modifier
 ) {
+    // Calculate effective columns based on window size
+    val effectiveColumns = if (windowSizeClass != null) {
+        windowSizeClass.getRecommendedColumns(columns)
+    } else {
+        columns
+    }
     // Local mutable state for optimistic updates
     // We start with the passed buttons. 
     // We use a key to force recreation if the *source* buttons change significantly (e.g. navigation)
@@ -206,7 +214,7 @@ fun CommunicationGrid(
         }
     } else {
         LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
+            columns = GridCells.Fixed(effectiveColumns),
             state = lazyGridState,
             modifier = modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),

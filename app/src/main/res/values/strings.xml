@@ -38,6 +38,7 @@
     <string name="pin">PIN</string>
     <string name="incorrect_pin">Incorrect PIN</string>
     <string name="unlock">Unlock</string>
+    <string name="default_web_client_id">DEFAULT_WEB_CLIENT_ID</string>
     
     <!-- Settings Screen -->
     <string name="language">Language</string>

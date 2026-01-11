@@ -5,17 +5,19 @@ import com.example.myaac.data.nlp.HybridPredictionEngine
 import com.example.myaac.data.nlp.LocalPredictionEngine
 import com.example.myaac.data.nlp.AiPredictionEngine
 import com.example.myaac.data.remote.GeminiService
+import com.example.myaac.data.cache.PhraseCacheService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
  * Repository for managing word predictions
- * Coordinates between local and AI prediction engines
+ * Coordinates between local and AI prediction engines with persistent caching
  */
 class PredictionRepository(
     private val wordFrequencyDao: WordFrequencyDao,
     private val geminiService: GeminiService?,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val cacheService: PhraseCacheService
 ) {
     private val localEngine = LocalPredictionEngine(wordFrequencyDao)
     private var aiEngine: AiPredictionEngine? = null
@@ -33,7 +35,11 @@ class PredictionRepository(
         
         // Create AI engine if Gemini is available
         aiEngine = if (geminiService != null && settings.aiPredictionEnabled) {
-            AiPredictionEngine(geminiService, settings.languageCode)
+            AiPredictionEngine(
+                geminiService = geminiService,
+                cacheService = cacheService,
+                languageCode = settings.languageCode
+            )
         } else {
             null
         }
@@ -47,22 +53,30 @@ class PredictionRepository(
     }
     
     /**
-     * Get word predictions based on context
-     * @param context List of previous words (most recent last)
-     * @return List of predicted words
+     * Get predictions for the current context
+     * @param context List of words in the current sentence
+     * @param topic Optional topic/board name to influence predictions
      */
-    suspend fun getPredictions(context: List<String>): List<String> = withContext(Dispatchers.IO) {
-        val settings = settingsRepository.settings.value
-        
-        if (!settings.predictionEnabled) {
+    suspend fun getPredictions(context: List<String>, topic: String? = null): List<String> = withContext(Dispatchers.IO) {
+        if (!settingsRepository.settings.value.predictionEnabled) {
             return@withContext emptyList()
         }
         
-        // Update engines if settings changed
-        updateEngines()
+        // Use hybrid engine if available (which handles delegation to local/AI)
+        val engine = hybridEngine ?: localEngine
         
-        // Get predictions from hybrid engine
-        hybridEngine?.predict(context, settings.predictionCount) ?: emptyList()
+        try {
+            val count = settingsRepository.settings.value.predictionCount
+            engine.predict(context, count, topic)
+        } catch (e: Exception) {
+            android.util.Log.e("PredictionRepo", "Error generating predictions", e)
+            // Fallback to local default predictions if error occurs
+            try {
+                localEngine.predict(context, 5, topic)
+            } catch (e2: Exception) {
+                emptyList()
+            }
+        }
     }
     
     /**

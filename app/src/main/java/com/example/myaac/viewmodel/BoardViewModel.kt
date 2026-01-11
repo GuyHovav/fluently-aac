@@ -11,6 +11,7 @@ import com.example.myaac.model.AacButton
 import com.example.myaac.model.Board
 import com.example.myaac.model.ButtonAction
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -19,6 +20,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import com.example.myaac.data.remote.ArasaacService
+import com.example.myaac.data.remote.GlobalSymbolsService
+import com.example.myaac.data.remote.CompositeSymbolService
+import com.example.myaac.data.remote.SymbolService
 import com.example.myaac.data.remote.GeminiService
 import com.example.myaac.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -43,17 +47,51 @@ data class BoardUiState(
     val predictions: List<String> = emptyList(),
     val predictionSymbols: Map<String, String?> = emptyMap(), // word -> symbol URL
     val isPredictionLoading: Boolean = false,
-    // Dynamic Home Board
-    val homeBoardButtons: List<AacButton>? = null
+    // Agent State
+    val agentResponse: String? = null,
+    val isAgentProcessing: Boolean = false
 )
 
 class BoardViewModel(
     private val application: android.app.Application,
     private val repository: BoardRepository,
     private val settingsRepository: SettingsRepository,
-    private val geminiService: GeminiService? = null,
-    private val arasaacService: ArasaacService = ArasaacService()
+    private val cloudRepository: com.example.myaac.data.repository.CloudRepository? = null,
+    private val geminiService: GeminiService? = null
 ) : androidx.lifecycle.AndroidViewModel(application) {
+
+    // Services for symbol search
+    private val arasaacService = ArasaacService()
+    private val mulberryService = GlobalSymbolsService("mulberry")
+    private val arasaacGlobalService = GlobalSymbolsService("arasaac")
+    private val googleImageService = com.example.myaac.data.remote.GoogleImageService()
+    
+    private suspend fun searchSymbols(query: String): String? {
+        val langCode = settingsRepository.settings.value.languageCode
+        val locale = if (langCode == "iw") "he" else "en"
+        val lib = settingsRepository.settings.value.symbolLibrary
+        
+        val services = if (lib == "MULBERRY") {
+            listOf(mulberryService, arasaacService, googleImageService)
+        } else {
+            // Priority:
+            // 1. Arasaac Direct API (Standard)
+            // 2. Arasaac via Global Symbols (Backup for different indexing)
+            // 3. Mulberry (Last resort fallback to ensure content)
+            // 4. Google Image Search (Web fallback for proper nouns, locations, etc.)
+            listOf(arasaacService, arasaacGlobalService, mulberryService, googleImageService)
+        }
+        
+        val compositeService = CompositeSymbolService(services)
+        
+        return try {
+            val results = compositeService.search(query, locale)
+            results.firstOrNull()?.url
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 
     private val _uiState = MutableStateFlow(BoardUiState())
     val uiState: StateFlow<BoardUiState> = _uiState.asStateFlow()
@@ -71,15 +109,17 @@ class BoardViewModel(
         viewModelScope.launch {
             repository.allBoards.collect { boards ->
                 cachedBoards = boards
-                // Refresh home board buttons if we have predictions
-                if (_uiState.value.predictions.isNotEmpty()) {
-                    updateHomeBoardButtons(
-                        _uiState.value.predictions, 
-                        _uiState.value.predictionSymbols
-                    )
-                }
+                // Sync home board links
+                syncHomeBoardLinks()
             }
         }
+    }
+    
+    
+    // Cache service for AI predictions and grammar corrections
+    private val phraseCacheService: com.example.myaac.data.cache.PhraseCacheService by lazy {
+        val database = com.example.myaac.data.local.AppDatabase.getDatabase(application)
+        com.example.myaac.data.cache.PhraseCacheService(database.phraseCacheDao())
     }
     
     // Prediction repository
@@ -88,9 +128,11 @@ class BoardViewModel(
         com.example.myaac.data.repository.PredictionRepository(
             wordFrequencyDao = database.wordFrequencyDao(),
             geminiService = geminiService,
-            settingsRepository = settingsRepository
+            settingsRepository = settingsRepository,
+            cacheService = phraseCacheService
         )
     }
+
     
     // Prediction update job for debouncing
     private var predictionUpdateJob: kotlinx.coroutines.Job? = null
@@ -124,6 +166,20 @@ class BoardViewModel(
             // Trigger initial predictions
             updatePredictions()
         }
+        
+        // Periodic cache cleanup - run once on startup and then daily
+        viewModelScope.launch {
+            while (true) {
+                try {
+                    phraseCacheService.cleanupExpiredEntries()
+                    android.util.Log.d("BoardViewModel", "Cache cleanup completed")
+                } catch (e: Exception) {
+                    android.util.Log.e("BoardViewModel", "Cache cleanup failed", e)
+                }
+                // Wait 24 hours before next cleanup
+                kotlinx.coroutines.delay(24 * 60 * 60 * 1000L)
+            }
+        }
     }
 
     private suspend fun initializePreloadedBoards() = coroutineScope {
@@ -140,101 +196,117 @@ class BoardViewModel(
         val localeStr = if (currentLang == "iw") "he" else "en"
 
         // 1. I Want Board
-        val iWantDeferred = listOf(
-            async { createButtonWithSymbol(iWantId, 0, getString(com.example.myaac.R.string.btn_i_want), 0xFFE0E0E0, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_i_want)), "want", localeStr) },
-            async { createButtonWithSymbol(iWantId, 1, getString(com.example.myaac.R.string.btn_to_eat), 0xFFFFE0B2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_to_eat)), "eat", localeStr) },
-            async { createButtonWithSymbol(iWantId, 2, getString(com.example.myaac.R.string.btn_to_sleep), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_to_sleep)), "sleep", localeStr) },
-            async { createButtonWithSymbol(iWantId, 3, getString(com.example.myaac.R.string.btn_to_go), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_to_go)), "go", localeStr) },
-            async { createButtonWithSymbol(iWantId, 4, getString(com.example.myaac.R.string.btn_play), 0xFFC5CAE9, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_play)), "play", localeStr) },
-            async { createButtonWithSymbol(iWantId, 5, getString(com.example.myaac.R.string.btn_drink), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_drink)), "drink", localeStr) },
-            async { createButtonWithSymbol(iWantId, 6, getString(com.example.myaac.R.string.btn_help), 0xFFB2DFDB, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_help)), "help", localeStr) },
-            async { createButtonWithSymbol(iWantId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
-        )
-        val iWantButtons = iWantDeferred.awaitAll()
-        repository.saveBoard(Board(iWantId, getString(com.example.myaac.R.string.board_i_want_name), buttons = iWantButtons, iconPath = "https://static.arasaac.org/pictograms/5441/5441_300.png"))
+        if (repository.getBoard(iWantId) == null) {
+            val iWantDeferred = listOf(
+                async { createButtonWithSymbol(iWantId, 0, getString(com.example.myaac.R.string.btn_i_want), 0xFFE0E0E0, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_i_want)), "want", localeStr) },
+                async { createButtonWithSymbol(iWantId, 1, getString(com.example.myaac.R.string.btn_to_eat), 0xFFFFE0B2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_to_eat)), "eat", localeStr) },
+                async { createButtonWithSymbol(iWantId, 2, getString(com.example.myaac.R.string.btn_to_sleep), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_to_sleep)), "sleep", localeStr) },
+                async { createButtonWithSymbol(iWantId, 3, getString(com.example.myaac.R.string.btn_to_go), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_to_go)), "go", localeStr) },
+                async { createButtonWithSymbol(iWantId, 4, getString(com.example.myaac.R.string.btn_play), 0xFFC5CAE9, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_play)), "play", localeStr) },
+                async { createButtonWithSymbol(iWantId, 5, getString(com.example.myaac.R.string.btn_drink), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_drink)), "drink", localeStr) },
+                async { createButtonWithSymbol(iWantId, 6, getString(com.example.myaac.R.string.btn_help), 0xFFB2DFDB, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_help)), "help", localeStr) },
+                async { createButtonWithSymbol(iWantId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
+            )
+            val iWantButtons = iWantDeferred.awaitAll()
+            repository.saveBoard(Board(iWantId, getString(com.example.myaac.R.string.board_i_want_name), buttons = iWantButtons, iconPath = "https://static.arasaac.org/pictograms/5441/5441_300.png"))
+        }
 
         // 2. I Need Board
-        val iNeedDeferred = listOf(
-            async { createButtonWithSymbol(iNeedId, 0, getString(com.example.myaac.R.string.btn_i_need), 0xFFE0E0E0, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_i_need)), "need", localeStr) },
-            async { createButtonWithSymbol(iNeedId, 1, getString(com.example.myaac.R.string.btn_bathroom), 0xFFCFD8DC, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_bathroom)), "toilet", localeStr) },
-            async { createButtonWithSymbol(iNeedId, 2, getString(com.example.myaac.R.string.btn_tissue), 0xFFFFFFFF, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_tissue)), "tissue", localeStr) },
-            async { createButtonWithSymbol(iNeedId, 3, getString(com.example.myaac.R.string.btn_help), 0xFFB2DFDB, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_help)), "help", localeStr) },
-            async { createButtonWithSymbol(iNeedId, 4, getString(com.example.myaac.R.string.btn_water), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_water)), "water", localeStr) },
-            async { createButtonWithSymbol(iNeedId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
-        )
-        val iNeedButtons = iNeedDeferred.awaitAll()
-        repository.saveBoard(Board(iNeedId, getString(com.example.myaac.R.string.board_i_need_name), buttons = iNeedButtons, iconPath = "https://static.arasaac.org/pictograms/37160/37160_300.png"))
+        if (repository.getBoard(iNeedId) == null) {
+            val iNeedDeferred = listOf(
+                async { createButtonWithSymbol(iNeedId, 0, getString(com.example.myaac.R.string.btn_i_need), 0xFFE0E0E0, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_i_need)), "need", localeStr) },
+                async { createButtonWithSymbol(iNeedId, 1, getString(com.example.myaac.R.string.btn_bathroom), 0xFFCFD8DC, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_bathroom)), "toilet", localeStr) },
+                async { createButtonWithSymbol(iNeedId, 2, getString(com.example.myaac.R.string.btn_tissue), 0xFFFFFFFF, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_tissue)), "tissue", localeStr) },
+                async { createButtonWithSymbol(iNeedId, 3, getString(com.example.myaac.R.string.btn_help), 0xFFB2DFDB, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_help)), "help", localeStr) },
+                async { createButtonWithSymbol(iNeedId, 4, getString(com.example.myaac.R.string.btn_water), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_water)), "water", localeStr) },
+                async { createButtonWithSymbol(iNeedId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
+            )
+            val iNeedButtons = iNeedDeferred.awaitAll()
+            repository.saveBoard(Board(iNeedId, getString(com.example.myaac.R.string.board_i_need_name), buttons = iNeedButtons, iconPath = "https://static.arasaac.org/pictograms/37160/37160_300.png"))
+        }
 
         // 3. I Feel Board (Feelings)
-        val iFeelDeferred = listOf(
-            async { createButtonWithSymbol(iFeelId, 0, getString(com.example.myaac.R.string.btn_i_feel), 0xFFE0E0E0, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_i_feel)), "feeling", localeStr) },
-            async { createButtonWithSymbol(iFeelId, 1, getString(com.example.myaac.R.string.btn_happy), 0xFFFFF9C4, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_happy)), null, localeStr) },
-            async { createButtonWithSymbol(iFeelId, 2, getString(com.example.myaac.R.string.btn_sad), 0xFFE1BEE7, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_sad)), null, localeStr) },
-            async { createButtonWithSymbol(iFeelId, 3, getString(com.example.myaac.R.string.btn_mad), 0xFFFFCDD2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_mad)), "angry", localeStr) },
-            async { createButtonWithSymbol(iFeelId, 4, getString(com.example.myaac.R.string.btn_tired), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_tired)), null, localeStr) },
-            async { createButtonWithSymbol(iFeelId, 5, getString(com.example.myaac.R.string.btn_scared), 0xFFCFD8DC, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_scared)), null, localeStr) },
-            async { createButtonWithSymbol(iFeelId, 6, getString(com.example.myaac.R.string.btn_excited), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_excited)), null, localeStr) },
-            async { createButtonWithSymbol(iFeelId, 7, getString(com.example.myaac.R.string.btn_sick), 0xFFB2DFDB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_sick)), null, localeStr) },
-            async { createButtonWithSymbol(iFeelId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
-        )
-        val iFeelButtons = iFeelDeferred.awaitAll()
-        repository.saveBoard(Board(iFeelId, getString(com.example.myaac.R.string.board_feelings_name), buttons = iFeelButtons, iconPath = "https://static.arasaac.org/pictograms/37190/37190_300.png"))
+        if (repository.getBoard(iFeelId) == null) {
+            val iFeelDeferred = listOf(
+                async { createButtonWithSymbol(iFeelId, 0, getString(com.example.myaac.R.string.btn_i_feel), 0xFFE0E0E0, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_i_feel)), "feeling", localeStr) },
+                async { createButtonWithSymbol(iFeelId, 1, getString(com.example.myaac.R.string.btn_happy), 0xFFFFF9C4, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_happy)), null, localeStr) },
+                async { createButtonWithSymbol(iFeelId, 2, getString(com.example.myaac.R.string.btn_sad), 0xFFE1BEE7, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_sad)), null, localeStr) },
+                async { createButtonWithSymbol(iFeelId, 3, getString(com.example.myaac.R.string.btn_mad), 0xFFFFCDD2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_mad)), "angry", localeStr) },
+                async { createButtonWithSymbol(iFeelId, 4, getString(com.example.myaac.R.string.btn_tired), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_tired)), null, localeStr) },
+                async { createButtonWithSymbol(iFeelId, 5, getString(com.example.myaac.R.string.btn_scared), 0xFFCFD8DC, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_scared)), null, localeStr) },
+                async { createButtonWithSymbol(iFeelId, 6, getString(com.example.myaac.R.string.btn_excited), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_excited)), null, localeStr) },
+                async { createButtonWithSymbol(iFeelId, 7, getString(com.example.myaac.R.string.btn_sick), 0xFFB2DFDB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_sick)), null, localeStr) },
+                async { createButtonWithSymbol(iFeelId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
+            )
+            val iFeelButtons = iFeelDeferred.awaitAll()
+            repository.saveBoard(Board(iFeelId, getString(com.example.myaac.R.string.board_feelings_name), buttons = iFeelButtons, iconPath = "https://static.arasaac.org/pictograms/37190/37190_300.png"))
+        }
 
         // 4. You Board (Questions about others)
-        val youDeferred = listOf(
-            async { createButtonWithSymbol(youId, 0, getString(com.example.myaac.R.string.btn_how_are_you), 0xFFE1BEE7, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_how_are_you)), "how", localeStr) },
-            async { createButtonWithSymbol(youId, 1, getString(com.example.myaac.R.string.btn_what_do_you_want), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_what_do_you_want)), "what", localeStr) },
-            async { createButtonWithSymbol(youId, 2, getString(com.example.myaac.R.string.btn_where_are_you), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_where_are_you)), "where", localeStr) },
-            async { createButtonWithSymbol(youId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
-        )
-        val youButtons = youDeferred.awaitAll()
-        repository.saveBoard(Board(youId, getString(com.example.myaac.R.string.board_you_name), buttons = youButtons, iconPath = "https://static.arasaac.org/pictograms/6625/6625_300.png"))
+        if (repository.getBoard(youId) == null) {
+            val youDeferred = listOf(
+                async { createButtonWithSymbol(youId, 0, getString(com.example.myaac.R.string.btn_how_are_you), 0xFFE1BEE7, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_how_are_you)), "how", localeStr) },
+                async { createButtonWithSymbol(youId, 1, getString(com.example.myaac.R.string.btn_what_do_you_want), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_what_do_you_want)), "what", localeStr) },
+                async { createButtonWithSymbol(youId, 2, getString(com.example.myaac.R.string.btn_where_are_you), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_where_are_you)), "where", localeStr) },
+                async { createButtonWithSymbol(youId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
+            )
+            val youButtons = youDeferred.awaitAll()
+            repository.saveBoard(Board(youId, getString(com.example.myaac.R.string.board_you_name), buttons = youButtons, iconPath = "https://static.arasaac.org/pictograms/6625/6625_300.png"))
+        }
 
         // 5. Family Board
-        val familyDeferred = listOf(
-            async { createButtonWithSymbol(familyId, 0, getString(com.example.myaac.R.string.btn_mom), 0xFFFFE0B2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_mom)), "mother", localeStr) },
-            async { createButtonWithSymbol(familyId, 1, getString(com.example.myaac.R.string.btn_dad), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_dad)), "father", localeStr) },
-            async { createButtonWithSymbol(familyId, 2, getString(com.example.myaac.R.string.btn_brother), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_brother)), null, localeStr) },
-            async { createButtonWithSymbol(familyId, 3, getString(com.example.myaac.R.string.btn_sister), 0xFFE1BEE7, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_sister)), null, localeStr) },
-            async { createButtonWithSymbol(familyId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
-        )
-        val familyButtons = familyDeferred.awaitAll()
-        repository.saveBoard(Board(familyId, getString(com.example.myaac.R.string.board_family_name), buttons = familyButtons, iconPath = "https://static.arasaac.org/pictograms/38351/38351_300.png"))
+        if (repository.getBoard(familyId) == null) {
+            val familyDeferred = listOf(
+                async { createButtonWithSymbol(familyId, 0, getString(com.example.myaac.R.string.btn_mom), 0xFFFFE0B2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_mom)), "mother", localeStr) },
+                async { createButtonWithSymbol(familyId, 1, getString(com.example.myaac.R.string.btn_dad), 0xFFBBDEFB, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_dad)), "father", localeStr) },
+                async { createButtonWithSymbol(familyId, 2, getString(com.example.myaac.R.string.btn_brother), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_brother)), null, localeStr) },
+                async { createButtonWithSymbol(familyId, 3, getString(com.example.myaac.R.string.btn_sister), 0xFFE1BEE7, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_sister)), null, localeStr) },
+                async { createButtonWithSymbol(familyId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
+            )
+            val familyButtons = familyDeferred.awaitAll()
+            repository.saveBoard(Board(familyId, getString(com.example.myaac.R.string.board_family_name), buttons = familyButtons, iconPath = "https://static.arasaac.org/pictograms/38351/38351_300.png"))
+        }
 
         // 6. Friends Board
-        val friendsDeferred = listOf(
-            async { createButtonWithSymbol(friendsId, 0, getString(com.example.myaac.R.string.btn_friend), 0xFFC5CAE9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_friend)), null, localeStr) },
-            async { createButtonWithSymbol(friendsId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
-        )
-        val friendsButtons = friendsDeferred.awaitAll()
-        repository.saveBoard(Board(friendsId, getString(com.example.myaac.R.string.board_friends_name), buttons = friendsButtons, iconPath = "https://static.arasaac.org/pictograms/2255/2255_300.png"))
+        if (repository.getBoard(friendsId) == null) {
+            val friendsDeferred = listOf(
+                async { createButtonWithSymbol(friendsId, 0, getString(com.example.myaac.R.string.btn_friend), 0xFFC5CAE9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_friend)), null, localeStr) },
+                async { createButtonWithSymbol(friendsId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
+            )
+            val friendsButtons = friendsDeferred.awaitAll()
+            repository.saveBoard(Board(friendsId, getString(com.example.myaac.R.string.board_friends_name), buttons = friendsButtons, iconPath = "https://static.arasaac.org/pictograms/2255/2255_300.png"))
+        }
 
         // 7. Apps Board
-        val appsDeferred = listOf(
-            async { createButtonWithSymbol(appsId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
-        )
-        val appsButtons = appsDeferred.awaitAll()
-        repository.saveBoard(Board(appsId, getString(com.example.myaac.R.string.board_apps_name), buttons = appsButtons, iconPath = "https://static.arasaac.org/pictograms/28099/28099_300.png"))
+        if (repository.getBoard(appsId) == null) {
+            val appsDeferred = listOf(
+                async { createButtonWithSymbol(appsId, 15, getString(com.example.myaac.R.string.btn_back_home), 0xFFFFCC80, ButtonAction.LinkToBoard(homeId), "home", localeStr) }
+            )
+            val appsButtons = appsDeferred.awaitAll()
+            repository.saveBoard(Board(appsId, getString(com.example.myaac.R.string.board_apps_name), buttons = appsButtons, iconPath = "https://static.arasaac.org/pictograms/28099/28099_300.png"))
+        }
 
         // 8. Home Board (Hub) - Links to all category boards
-        val homeDeferred = listOf(
-            // Category buttons - large navigation buttons
-            async { createButtonWithSymbol(homeId, 0, getString(com.example.myaac.R.string.board_i_want_name), 0xFFE3F2FD, ButtonAction.LinkToBoard(iWantId), "want", localeStr) },
-            async { createButtonWithSymbol(homeId, 1, getString(com.example.myaac.R.string.board_i_need_name), 0xFFFFF3E0, ButtonAction.LinkToBoard(iNeedId), "need", localeStr) },
-            async { createButtonWithSymbol(homeId, 2, getString(com.example.myaac.R.string.board_feelings_name), 0xFFFCE4EC, ButtonAction.LinkToBoard(iFeelId), "feeling", localeStr) },
-            async { createButtonWithSymbol(homeId, 3, getString(com.example.myaac.R.string.board_you_name), 0xFFE8EAF6, ButtonAction.Speak("you"), "you", localeStr) },
-            async { createButtonWithSymbol(homeId, 4, getString(com.example.myaac.R.string.board_family_name), 0xFFFFEBEE, ButtonAction.LinkToBoard(familyId), "family", localeStr) },
-            async { createButtonWithSymbol(homeId, 5, getString(com.example.myaac.R.string.board_friends_name), 0xFFE0F2F1, ButtonAction.LinkToBoard(friendsId), "friends", localeStr) },
-            async { createButtonWithSymbol(homeId, 6, getString(com.example.myaac.R.string.board_apps_name), 0xFFFFF9C4, ButtonAction.LinkToBoard(appsId), "apps", localeStr) },
+        if (repository.getBoard(homeId) == null) {
+            val homeDeferred = listOf(
+                // Category buttons - large navigation buttons
+                async { createButtonWithSymbol(homeId, 0, getString(com.example.myaac.R.string.board_i_want_name), 0xFFE3F2FD, ButtonAction.LinkToBoard(iWantId), "want", localeStr) },
+                async { createButtonWithSymbol(homeId, 1, getString(com.example.myaac.R.string.board_i_need_name), 0xFFFFF3E0, ButtonAction.LinkToBoard(iNeedId), "need", localeStr) },
+                async { createButtonWithSymbol(homeId, 2, getString(com.example.myaac.R.string.board_feelings_name), 0xFFFCE4EC, ButtonAction.LinkToBoard(iFeelId), "feeling", localeStr) },
+                async { createButtonWithSymbol(homeId, 3, getString(com.example.myaac.R.string.board_you_name), 0xFFE8EAF6, ButtonAction.Speak("you"), "you", localeStr) },
+                async { createButtonWithSymbol(homeId, 4, getString(com.example.myaac.R.string.board_family_name), 0xFFFFEBEE, ButtonAction.LinkToBoard(familyId), "family", localeStr) },
+                async { createButtonWithSymbol(homeId, 5, getString(com.example.myaac.R.string.board_friends_name), 0xFFE0F2F1, ButtonAction.LinkToBoard(friendsId), "friends", localeStr) },
+                async { createButtonWithSymbol(homeId, 6, getString(com.example.myaac.R.string.board_apps_name), 0xFFFFF9C4, ButtonAction.LinkToBoard(appsId), "apps", localeStr) },
+                
+                // Quick access buttons
+                async { createButtonWithSymbol(homeId, 8, getString(com.example.myaac.R.string.btn_yes), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_yes)), null, localeStr) },
+                async { createButtonWithSymbol(homeId, 9, getString(com.example.myaac.R.string.btn_no), 0xFFFFCDD2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_no)), null, localeStr) },
+                async { createButtonWithSymbol(homeId, 10, getString(com.example.myaac.R.string.btn_help), 0xFFB2DFDB, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_help)), "help", localeStr) }
+            )
+            val homeButtons = homeDeferred.awaitAll()
             
-            // Quick access buttons
-            async { createButtonWithSymbol(homeId, 8, getString(com.example.myaac.R.string.btn_yes), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_yes)), null, localeStr) },
-            async { createButtonWithSymbol(homeId, 9, getString(com.example.myaac.R.string.btn_no), 0xFFFFCDD2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_no)), null, localeStr) },
-            async { createButtonWithSymbol(homeId, 10, getString(com.example.myaac.R.string.btn_help), 0xFFB2DFDB, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_help)), "help", localeStr) }
-        )
-        val homeButtons = homeDeferred.awaitAll()
-        
-        repository.saveBoard(Board(homeId, getString(com.example.myaac.R.string.board_home_name), buttons = homeButtons, iconPath = "https://static.arasaac.org/pictograms/6964/6964_300.png"))
+            repository.saveBoard(Board(homeId, getString(com.example.myaac.R.string.board_home_name), buttons = homeButtons, iconPath = "https://static.arasaac.org/pictograms/6964/6964_300.png"))
+        }
     }
 
     private fun createButton(boardId: String, index: Int, label: String, color: Long, action: ButtonAction): AacButton {
@@ -259,14 +331,7 @@ class BoardViewModel(
         val query = searchTerm ?: label
         var iconPath: String? = null
         if (query.isNotEmpty()) {
-             try {
-                val searchResults = arasaacService.searchPictograms(query, locale)
-                if (searchResults.isNotEmpty()) {
-                    iconPath = arasaacService.getImageUrl(searchResults[0]._id)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+             iconPath = searchSymbols(query)
         }
        
         return createButton(boardId, index, label, color, action).copy(iconPath = iconPath)
@@ -295,14 +360,7 @@ class BoardViewModel(
             
             // Try to find an icon for the board name
             var iconPath: String? = null
-            try {
-                val searchResults = arasaacService.searchPictograms(name, java.util.Locale.getDefault().language)
-                if (searchResults.isNotEmpty()) {
-                    iconPath = arasaacService.getImageUrl(searchResults[0]._id)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            iconPath = searchSymbols(name)
 
             val newBoard = Board(id = newId, name = name, buttons = buttons, iconPath = iconPath)
             repository.saveBoard(newBoard)
@@ -315,8 +373,6 @@ class BoardViewModel(
     
     // Back Stack for navigation
     private val _backStack = java.util.Stack<String>()
-    private var cachedHomeBoardButtons: List<com.example.myaac.model.AacButton>? = null
-    private var cachedPredictionSentence: List<com.example.myaac.model.AacButton>? = null
     
     val canNavigateBack: Boolean
         get() = !_backStack.isEmpty()
@@ -334,15 +390,7 @@ class BoardViewModel(
                     _backStack.push(currentId)
                 }
                 
-                // If returning to home, try to use cached buttons immediately to prevent empty flash
-                if (boardId == "home" && cachedHomeBoardButtons != null && cachedPredictionSentence == _uiState.value.sentence) {
-                     _uiState.update { it.copy(currentBoard = board, homeBoardButtons = cachedHomeBoardButtons) }
-                     // If restored from cache and sentence hasn't changed, strictly SKIP updatePredictions
-                     // This prevents overwriting the valid cache with empty/loading state
-                     return@launch
-                } else {
-                     _uiState.update { it.copy(currentBoard = board) }
-                }
+                _uiState.update { it.copy(currentBoard = board) }
                 // Trigger predictions update as context (isHomeBoard) might have changed
                 // Use instant update logic to ensure home board buttons appear immediately
                 updatePredictions(instant = true)
@@ -357,13 +405,7 @@ class BoardViewModel(
         viewModelScope.launch {
             val board = repository.getBoard(previousBoardId)
             if (board != null) {
-                
-                // If returning to home, try to use cached buttons immediately to prevent empty flash
-                if (previousBoardId == "home" && cachedHomeBoardButtons != null && cachedPredictionSentence == _uiState.value.sentence) {
-                     _uiState.update { it.copy(currentBoard = board, homeBoardButtons = cachedHomeBoardButtons) }
-                } else {
-                     _uiState.update { it.copy(currentBoard = board) }
-                }
+                _uiState.update { it.copy(currentBoard = board) }
                 
                 updatePredictions(instant = true)
             } else {
@@ -376,14 +418,14 @@ class BoardViewModel(
         return true
     }
 
-    suspend fun createMagicBoard(name: String, topic: String): String = coroutineScope {
+    suspend fun createMagicBoard(name: String, topic: String, negativeConstraints: String? = null): String = coroutineScope {
         val service = geminiService ?: throw IllegalStateException("Gemini Service not initialized")
         _uiState.update { it.copy(isLoading = true) }
         val newId = java.util.UUID.randomUUID().toString()
         try {
             val langCode = settingsRepository.settings.value.languageCode
             val itemsToGenerate = settingsRepository.settings.value.itemsToGenerate
-            val words = service.generateBoard(topic, langCode, itemsToGenerate)
+            val words = service.generateBoard(topic, langCode, itemsToGenerate, negativeConstraints)
             
             // Map words to buttons with symbols using async fetches
             val arasaacLocale = if (langCode == "iw") "he" else "en"
@@ -404,15 +446,7 @@ class BoardViewModel(
             val buttons = deferredButtons.awaitAll()
             
             // Try to find an icon for the topic
-            var boardIconPath: String? = null
-            try {
-                val searchResults = arasaacService.searchPictograms(topic, arasaacLocale)
-                if (searchResults.isNotEmpty()) {
-                    boardIconPath = arasaacService.getImageUrl(searchResults[0]._id)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            var boardIconPath: String? = searchSymbols(topic)
             
             val newBoard = Board(id = newId, name = name, buttons = buttons, iconPath = boardIconPath)
             repository.saveBoard(newBoard)
@@ -500,12 +534,28 @@ class BoardViewModel(
 
                 // Create new buttons
                 val arasaacLocale = if (langCode == "iw") "he" else "en"
-                val startIndex = board.buttons.size
+                
+                // Calculate available indices to avoid collisions with existing buttons (e.g. Home button at 15)
+                val usedIndices = board.buttons.mapNotNull { 
+                     // Handle both standard IDs and potentially UUIDs (which won't parse to Int and are ignored here)
+                     it.id.substringAfterLast("_btn_").toIntOrNull() 
+                }.toSet()
+                
+                val availableIndices = mutableListOf<Int>()
+                var candidate = 0
+                // We need as many indices as new words
+                while (availableIndices.size < newWords.size) {
+                    if (candidate !in usedIndices) {
+                        availableIndices.add(candidate)
+                    }
+                    candidate++
+                }
+
                 val deferredNewButtons = newWords.mapIndexed { index, word ->
                     async {
                         createButtonWithSymbol(
                             boardId = board.id,
-                            index = startIndex + index,
+                            index = availableIndices[index],
                             label = word,
                             color = 0xFFFFF9C4,
                             action = ButtonAction.Speak(word),
@@ -621,15 +671,7 @@ class BoardViewModel(
             // Create buttons with symbols
             val deferredButtons = sortedObjects.mapIndexed { index, label ->
                 async {
-                    var iconPath: String? = null
-                    try {
-                        val searchResults = arasaacService.searchPictograms(label, arasaacLocale)
-                        if (searchResults.isNotEmpty()) {
-                            iconPath = arasaacService.getImageUrl(searchResults[0]._id)
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                    var iconPath: String? = searchSymbols(label)
                     
                     AacButton(
                         id = "${newId}_btn_$index",
@@ -667,17 +709,7 @@ class BoardViewModel(
     }
 
     suspend fun checkSymbol(query: String): String? {
-        return try {
-            val searchResults = arasaacService.searchPictograms(query, java.util.Locale.getDefault().language)
-            if (searchResults.isNotEmpty()) {
-                arasaacService.getImageUrl(searchResults[0]._id)
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
+        return searchSymbols(query)
     }
 
     suspend fun simplifyLocationName(rawName: String): String {
@@ -799,10 +831,11 @@ class BoardViewModel(
                 
                 _uiState.update { it.copy(isGrammarLoading = true) }
                 
-                // 3. Call Gemini
+                // 3. Call Gemini with cache support
                 val correctedText = geminiService?.correctGrammar(
-                    text, 
-                    settingsRepository.settings.value.languageCode
+                    sentence = text, 
+                    languageCode = settingsRepository.settings.value.languageCode,
+                    cacheService = phraseCacheService
                 )
                 
                 // 4. Handle Result
@@ -963,9 +996,7 @@ class BoardViewModel(
         // If predictions disabled, clear them BUT still update Home Board (for links)
         if (!settings.predictionEnabled) {
             _uiState.update { it.copy(predictions = emptyList(), predictionSymbols = emptyMap()) }
-            if (isHomeBoard) {
-                updateHomeBoardButtons(emptyList(), emptyMap())
-            }
+            // Note: syncHomeBoardLinks is called automatically via init block when boards update
             return
         }
         
@@ -984,6 +1015,8 @@ class BoardViewModel(
                 val currentIsHomeBoard = _uiState.value.currentBoard?.id == "home"
                 
                 // Smart contextual predictions
+                val boardContext = if (currentIsHomeBoard) null else _uiState.value.currentBoard?.name
+                
                 val predictions = when {
                     // Empty sentence on home board → Starter words
                     context.isEmpty() && currentIsHomeBoard -> {
@@ -999,38 +1032,40 @@ class BoardViewModel(
                             pronoun,
                             settings.languageCode
                         )
-                        if (verbs.isNotEmpty()) verbs else predictionRepository.getPredictions(context)
+                        if (verbs.isNotEmpty()) verbs else predictionRepository.getPredictions(context, boardContext)
                     }
                     
                     // Multiple words → Check for phrase completions
                     context.size >= 2 && currentIsHomeBoard -> {
                         val phrase = context.joinToString(" ")
+                        
+                         // Get user-created board names (exclude system boards)
+                        val userBoardNames = cachedBoards
+                            .filter { it.id != "home" && it.id != "board_you" && it.id != "board_apps" }
+                            .map { it.name }
+                        
                         val completions = com.example.myaac.data.nlp.HybridPredictionEngine.getCompletionsForPhrase(
                             phrase,
-                            settings.languageCode
+                            settings.languageCode,
+                            userBoardNames
                         )
-                        if (completions.isNotEmpty()) completions else predictionRepository.getPredictions(context)
+                        if (completions.isNotEmpty()) completions else predictionRepository.getPredictions(context, boardContext)
                     }
                     
                     // Default → AI predictions
-                    else -> predictionRepository.getPredictions(context)
+                    else -> predictionRepository.getPredictions(context, boardContext)
                 }
                 
-                // Fetch symbols for predictions if enabled
+                // Fetch symbols for predictions
                 val symbolMap = if (settings.showSymbolsInPredictions && predictions.isNotEmpty()) {
                     fetchSymbolsForPredictions(predictions)
                 } else {
                     emptyMap()
                 }
                 
-                // Always update dynamic home board so it's ready when we navigate there
-                updateHomeBoardButtons(predictions, symbolMap)
-                
                 // Filter predictions: only show words NOT on the current board
-                // For Home Board: current buttons are in uiState.homeBoardButtons (which we just updated)
-                // For other boards: current buttons are in uiState.currentBoard.buttons
                 val visibleWords = if (currentIsHomeBoard) {
-                    _uiState.value.homeBoardButtons?.map { it.label } ?: emptyList()
+                    _uiState.value.currentBoard?.buttons?.map { it.label } ?: emptyList()
                 } else {
                     _uiState.value.currentBoard?.buttons?.map { it.label } ?: emptyList()
                 }
@@ -1062,67 +1097,102 @@ class BoardViewModel(
             }
         }
     }
-
+    
     /**
-     * Update the list of buttons for the dynamic home board
+     * Handle prediction selection by user
+     * @param word The predicted word that was selected
      */
-    private fun updateHomeBoardButtons(predictions: List<String>, symbols: Map<String, String?>) {
-        val homeId = "home"
-        val topPredictions = predictions.take(16) // Max 16
-        
-        // Create prediction buttons
-        val predictionButtons = topPredictions.mapIndexed { index, word ->
-            AacButton(
-                id = "pred_${homeId}_$index",
-                label = word,
-                speechText = word,
-                backgroundColor = 0xFFE8F5E9L, // Light green
-                action = ButtonAction.Speak(word),
-                iconPath = symbols[word]
-            )
-        }
-        
-        // Get boards
-        val boards = cachedBoards
-        val youId = "board_you"
-        
-        // Filter out Home (self) and You (handled manually)
-        val filteredBoards = boards.filter { it.id != homeId && it.id != youId }
-        
-        // Create manual 'You' button (Speak action, not link)
-        val youButton = AacButton(
-            id = "manual_you_btn",
-            label = getString(com.example.myaac.R.string.board_you_name),
-            speechText = "you", // Correct speech text
-            backgroundColor = 0xFFE8EAF6,
-            action = ButtonAction.Speak("you"),
-            iconPath = "https://static.arasaac.org/pictograms/6625/6625_300.png"
+    fun onPredictionSelected(word: String) {
+        // Create a button for the predicted word
+        val symbolUrl = _uiState.value.predictionSymbols[word]
+        val button = AacButton(
+            id = "prediction_${java.util.UUID.randomUUID()}",
+            label = word,
+            speechText = word,
+            action = ButtonAction.Speak(word),
+            backgroundColor = 0xFFE8F5E9, // Light green to indicate it's from prediction
+            iconPath = symbolUrl
         )
         
-        val boardLinkButtons = filteredBoards
-            .mapIndexed { index, board ->
-                AacButton(
-                    id = "link_${homeId}_${predictionButtons.size + index}",
-                    label = board.name,
-                    speechText = null,
-                    backgroundColor = 0xFFE3F2FDL, // Light blue
-                    action = ButtonAction.LinkToBoard(board.id),
-                    iconPath = board.iconPath
-                )
+        // Add to sentence
+        addToSentence(button)
+        
+        // Record word usage for learning
+        viewModelScope.launch {
+            try {
+                predictionRepository.recordWordUsage(word)
+                android.util.Log.d("BoardViewModel", "Recorded prediction selection: $word")
+            } catch (e: Exception) {
+                android.util.Log.e("BoardViewModel", "Error recording prediction usage", e)
             }
+        }
+    }
+
+    /**
+     * Sync the list of buttons for the Home Board with available boards
+     * Preserves existing button order and only adds/removes links.
+     */
+    private suspend fun syncHomeBoardLinks() {
+        val homeId = "home"
+        // 1. Get current persistent board
+        val currentHomeBoard = repository.getBoard(homeId) ?: return 
+        
+        val allValidBoards = cachedBoards // Cached from repository.allBoards collection
+        val validBoardIds = allValidBoards.map { it.id }.toSet()
+        
+        // 2. Filter existing buttons - remove dead links
+        val preservedButtons = currentHomeBoard.buttons.filter { button ->
+            if (button.action is ButtonAction.LinkToBoard) {
+                 val targetId = (button.action).boardId
+                 // Keep link only if board exists
+                 validBoardIds.contains(targetId)
+            } else {
+                true // Keep other buttons (manual additions, Quick Access, etc.)
+            }
+        }
+        
+        // 3. Identify missing links
+        // We need to ensure every board (except Home, You, Apps?) has a link
+        val existingLinkTargets = preservedButtons
+            .mapNotNull { (it.action as? ButtonAction.LinkToBoard)?.boardId }
+            .toSet()
             
-        // Insert 'You' button at a specific position (e.g., index 3 to match default layout, or append)
-        // Let's allow it to flow naturally with other category buttons, but maybe prompt insert
-        // For now, let's prepend it or insert it into the list.
-        // Let's put 'You' after 'I Feel' if possible?
-        // Actually, just prepending to links (after predictions) is fine, or sorting.
-        // Let's just add it to the list.
+        // Boards that should have links but don't
+        val missingBoards = allValidBoards.filter { board ->
+             val id = board.id
+             id != homeId && id != "board_you" && id != "board_apps" 
+                 && !existingLinkTargets.contains(id)
+        }
         
-        val allDynamicButtons = predictionButtons + youButton + boardLinkButtons
+        // No changes needed?
+        if (missingBoards.isEmpty() && preservedButtons.size == currentHomeBoard.buttons.size) {
+            return
+        }
         
-        cachedHomeBoardButtons = allDynamicButtons
-        cachedPredictionSentence = _uiState.value.sentence
-        _uiState.update { it.copy(homeBoardButtons = allDynamicButtons) }
+        val newLinkButtons = missingBoards.map { board ->
+             AacButton(
+                 id = "link_${homeId}_board_${board.id}",
+                 label = board.name,
+                 speechText = null,
+                 backgroundColor = 0xFFE3F2FDL, // Light blue
+                 action = ButtonAction.LinkToBoard(board.id),
+                 iconPath = board.iconPath
+             )
+        }
+        
+        // 4. Assemble new list - append new links
+        val newButtonList = preservedButtons + newLinkButtons
+        
+        // 5. Save if changed
+        if (newButtonList != currentHomeBoard.buttons) {
+            val updatedBoard = currentHomeBoard.copy(buttons = newButtonList)
+            repository.saveBoard(updatedBoard)
+            
+            // Update UI if currently on Home
+            if (_uiState.value.currentBoard?.id == homeId) {
+                 _uiState.update { it.copy(currentBoard = updatedBoard) }
+            }
+        }
     }
     
     /**
@@ -1138,29 +1208,7 @@ class BoardViewModel(
         }
     }
     
-    /**
-     * Handle prediction selection
-     */
-    fun onPredictionSelected(word: String) {
-        // Create button from prediction
-        val symbolUrl = _uiState.value.predictionSymbols[word]
-        val button = AacButton(
-            id = "prediction_${java.util.UUID.randomUUID()}",
-            label = word,
-            speechText = word,
-            backgroundColor = 0xFFE8F5E9, // Light green to indicate it's from prediction
-            action = ButtonAction.Speak(word),
-            iconPath = symbolUrl
-        )
-        
-        // Add to sentence
-        addToSentence(button)
-        
-        // Record usage for learning
-        viewModelScope.launch {
-            predictionRepository.recordWordUsage(word)
-        }
-    }
+
     
     /**
      * Clear learned prediction data
@@ -1435,11 +1483,150 @@ class BoardViewModel(
         }
     }
 
+    fun backupToCloud(userId: String, onCompletion: (String) -> Unit) {
+        if (cloudRepository == null) {
+            onCompletion("Error: Cloud service not available")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                // Get all boards (fresh from repo to be safe)
+                val boards = repository.allBoards.first()
+                // Actually repository.allBoards is a Flow so we need to collect or first()
+                // Assuming we can get them.
+                
+                // If the flow is empty, backup what we have in cache?
+                val boardsToBackup = if (boards.isNotEmpty()) boards else cachedBoards
+                
+                var successCount = 0
+                boardsToBackup.forEach { board ->
+                    cloudRepository.backupBoard(board, userId)
+                    successCount++
+                }
+                
+                onCompletion("Successfully backed up $successCount boards")
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onCompletion("Backup Failed: ${e.message}")
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    fun restoreFromCloud(userId: String, onCompletion: (String) -> Unit) {
+        if (cloudRepository == null) {
+            onCompletion("Error: Cloud service not available")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val boards = cloudRepository.restoreBoards(userId)
+                
+                // Save all to local DB
+                boards.forEach { board ->
+                    repository.saveBoard(board)
+                }
+                
+                // Reload current board if needed or just navigate home
+                if (boards.isNotEmpty()) {
+                    navigateToBoard("home")
+                    // trigger refresh
+                    updatePredictions()
+                }
+                
+                onCompletion("Restored ${boards.size} boards")
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onCompletion("Restore Failed: ${e.message}")
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    fun submitAgentQuery(query: String) {
+        val service = geminiService ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAgentProcessing = true, agentResponse = null) }
+            try {
+                val action = service.parseAgentCommand(query)
+                
+                when (action) {
+                    is com.example.myaac.data.remote.GeminiService.AgentAction.CreateBoard -> {
+                        _uiState.update { it.copy(agentResponse = "Creating board '${action.topic}'...") }
+                        createMagicBoard(action.topic, action.topic, action.negativeConstraints)
+                        _uiState.update { it.copy(agentResponse = "Board created!") }
+                    }
+                    is com.example.myaac.data.remote.GeminiService.AgentAction.AnswerQuestion -> {
+                        val answer = service.answerQuestion(action.question)
+                        _uiState.update { it.copy(agentResponse = answer) }
+                    }
+                    is com.example.myaac.data.remote.GeminiService.AgentAction.Unknown -> {
+                        val answer = service.answerQuestion(query) // Fallback to Q&A if intent is unclear but maybe just a question
+                        _uiState.update { it.copy(agentResponse = answer) }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _uiState.update { it.copy(agentResponse = "Error: ${e.message}") }
+            } finally {
+                _uiState.update { it.copy(isAgentProcessing = false) }
+            }
+        }
+    }
+    
+    fun clearAgentResponse() {
+        _uiState.update { it.copy(agentResponse = null) }
+    }
+    
+    // ========== Cache Management ==========
+    
+    /**
+     * Get cache statistics for debugging/monitoring
+     */
+    suspend fun getCacheStats(): com.example.myaac.data.cache.CacheStats {
+        return phraseCacheService.getCacheStats()
+    }
+    
+    /**
+     * Clear all phrase cache (predictions and grammar)
+     */
+    suspend fun clearPhraseCache() {
+        phraseCacheService.clearAll()
+        android.util.Log.d("BoardViewModel", "Phrase cache cleared")
+    }
+    
+    /**
+     * Clear only prediction cache
+     */
+    suspend fun clearPredictionCache() {
+        phraseCacheService.clearByType(com.example.myaac.data.local.CacheType.PREDICTION)
+        android.util.Log.d("BoardViewModel", "Prediction cache cleared")
+    }
+    
+    /**
+     * Clear only grammar cache
+     */
+    suspend fun clearGrammarCache() {
+        phraseCacheService.clearByType(com.example.myaac.data.local.CacheType.GRAMMAR)
+        android.util.Log.d("BoardViewModel", "Grammar cache cleared")
+    }
+
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MyAacApplication)
-                BoardViewModel(application, application.repository, application.settingsRepository, application.geminiService)
+                BoardViewModel(
+                    application, 
+                    application.repository, 
+                    application.settingsRepository,
+                    application.cloudRepository, 
+                    application.geminiService
+                )
             }
         }
     }
