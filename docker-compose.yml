@@ -1,0 +1,13 @@
+services:
+  android-build:
+    build: .
+    volumes:
+      - .:/app
+      # Mount cache to speed up subsequent builds
+      - gradle_cache:/root/.gradle
+    environment:
+      - GRADLE_USER_HOME=/root/.gradle
+    command: ./gradlew assembleDebug
+
+volumes:
+  gradle_cache:
