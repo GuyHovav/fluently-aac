@@ -143,6 +143,13 @@ dependencies {
     testImplementation("org.mockito:mockito-core:5.10.0")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2023.08.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:rules:1.5.0")
 
     // Location
     implementation("com.google.android.gms:play-services-location:21.0.1")
@@ -162,6 +169,7 @@ dependencies {
         exclude(group = "gov.nih.nlm.nls.lexaccess")
         exclude(group = "javax.xml.bind")
         exclude(group = "com.sun.xml.bind")
+        exclude(group = "junit")
     }
 
     // Firebase

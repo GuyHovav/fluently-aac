@@ -85,8 +85,11 @@ class BoardViewModel(
         val compositeService = CompositeSymbolService(services)
         
         return try {
-            val results = compositeService.search(query, locale)
-            results.firstOrNull()?.url
+            // Timeout after 3 seconds to avoid blocking initialization
+            kotlinx.coroutines.withTimeout(3000L) {
+                val results = compositeService.search(query, locale)
+                results.firstOrNull()?.url
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -156,11 +159,27 @@ class BoardViewModel(
         
         viewModelScope.launch {
             // Check availability of Default Boards - Force update to fix symbols
-            initializePreloadedBoards()
+            try {
+                initializePreloadedBoards()
+            } catch (e: Exception) {
+                android.util.Log.e("BoardViewModel", "Failed to initialize boards", e)
+            }
             
             val homeId = "home"
             // Load the default board
-            val board = repository.getBoard(homeId)
+            var board = repository.getBoard(homeId)
+            
+            if (board == null) {
+                // Emergency fallback: Create a dummy home board so app doesn't hang on splash
+                android.util.Log.w("BoardViewModel", "Home board missing after init, creating fallback")
+                board = Board(homeId, "Home (Fallback)", buttons = emptyList())
+                try {
+                    repository.saveBoard(board)
+                } catch (e: Exception) {
+                    android.util.Log.e("BoardViewModel", "Failed to save fallback board", e)
+                }
+            }
+
             _uiState.update { it.copy(currentBoard = board) }
             
             // Trigger initial predictions
