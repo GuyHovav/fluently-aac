@@ -1,13 +1,79 @@
+# Enable BuildKit for better caching and parallel builds
+# Set DOCKER_BUILDKIT=1 or COMPOSE_DOCKER_CLI_BUILD=1 in your environment
+
 services:
-  android-build:
-    build: .
+  # Build debug APK
+  build-debug:
+    build:
+      context: .
+      cache_from:
+        - fluently-aac:latest
     volumes:
       - .:/app
-      # Mount cache to speed up subsequent builds
       - gradle_cache:/root/.gradle
     environment:
       - GRADLE_USER_HOME=/root/.gradle
-    command: ./gradlew assembleDebug
+      - GRADLE_OPTS=-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
+    command: ./gradlew assembleDebug --no-daemon --parallel --build-cache
+
+  # Build release APK
+  build-release:
+    build:
+      context: .
+      cache_from:
+        - fluently-aac:latest
+    volumes:
+      - .:/app
+      - gradle_cache:/root/.gradle
+    environment:
+      - GRADLE_USER_HOME=/root/.gradle
+      - GRADLE_OPTS=-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
+    command: ./gradlew assembleRelease --no-daemon --parallel --build-cache
+
+  # Run unit tests
+  test:
+    build:
+      context: .
+      cache_from:
+        - fluently-aac:latest
+    volumes:
+      - .:/app
+      - gradle_cache:/root/.gradle
+      - test_results:/app/app/build/test-results
+    environment:
+      - GRADLE_USER_HOME=/root/.gradle
+      - GRADLE_OPTS=-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
+    command: ./gradlew test --no-daemon --parallel --build-cache
+
+  # Run lint checks
+  lint:
+    build:
+      context: .
+      cache_from:
+        - fluently-aac:latest
+    volumes:
+      - .:/app
+      - gradle_cache:/root/.gradle
+      - lint_results:/app/app/build/reports/lint-results
+    environment:
+      - GRADLE_USER_HOME=/root/.gradle
+      - GRADLE_OPTS=-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
+    command: ./gradlew lint --no-daemon --parallel --build-cache
+
+  # Clean build artifacts
+  clean:
+    build:
+      context: .
+      cache_from:
+        - fluently-aac:latest
+    volumes:
+      - .:/app
+      - gradle_cache:/root/.gradle
+    environment:
+      - GRADLE_USER_HOME=/root/.gradle
+    command: ./gradlew clean --no-daemon
 
 volumes:
   gradle_cache:
+  test_results:
+  lint_results:

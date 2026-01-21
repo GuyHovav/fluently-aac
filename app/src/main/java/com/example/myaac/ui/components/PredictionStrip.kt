@@ -4,8 +4,9 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -15,11 +16,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
 
 /**
- * Prediction strip that displays word predictions below the sentence bar
+ * Prediction strip that displays word predictions as full-size buttons
  */
 @Composable
 fun PredictionStrip(
@@ -44,18 +47,16 @@ fun PredictionStrip(
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
             tonalElevation = 1.dp
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-            ) {
-                when {
-                    isLoading -> {
-                        // Loading state
+            when {
+                isLoading -> {
+                    // Loading state
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 12.dp),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -72,22 +73,24 @@ fun PredictionStrip(
                             )
                         }
                     }
-                    predictions.isNotEmpty() -> {
-                        // Predictions list
-                        LazyRow(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 8.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            items(predictions) { word ->
-                                PredictionChip(
-                                    word = word,
-                                    symbolUrl = if (showSymbols) predictionSymbols[word] else null,
-                                    onClick = { onPredictionClick(word) }
-                                )
-                            }
+                }
+                predictions.isNotEmpty() -> {
+                    // Predictions grid - full-size buttons
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 200.dp, max = 600.dp) // Allow grid to expand
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(predictions) { word ->
+                            PredictionButton(
+                                word = word,
+                                symbolUrl = if (showSymbols) predictionSymbols[word] else null,
+                                onClick = { onPredictionClick(word) }
+                            )
                         }
                     }
                 }
@@ -97,57 +100,68 @@ fun PredictionStrip(
 }
 
 /**
- * Individual prediction chip
+ * Individual prediction button - full-size matching board buttons
  */
 @Composable
-private fun PredictionChip(
+private fun PredictionButton(
     word: String,
     symbolUrl: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    Column(
         modifier = modifier
-            .height(32.dp)
+            .aspectRatio(1f / 1.5f)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        tonalElevation = 1.dp
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
+        // Symbol section (top part)
+        Box(
             modifier = Modifier
-                .padding(horizontal = 10.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+                .weight(2.2f)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.Center
         ) {
-            // Symbol icon (if available and enabled)
             if (symbolUrl != null) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color.White.copy(alpha = 0.3f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    coil.compose.AsyncImage(
-                        model = symbolUrl,
-                        contentDescription = null,
-                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(6.dp))
+                coil.compose.AsyncImage(
+                    model = symbolUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                // Show first letter as placeholder
+                Text(
+                    text = word.firstOrNull()?.toString()?.uppercase() ?: "",
+                    fontSize = 48.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.3f)
+                )
             }
-            
-            // Word text
+        }
+
+        // Text label section (bottom part)
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .weight(1.2f)
+                .fillMaxWidth()
+                .background(Color.White.copy(alpha = 0.9f)),
+            contentAlignment = Alignment.Center
+        ) {
             Text(
                 text = word,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 ),
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                textAlign = TextAlign.Center
+                color = Color.Black,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
             )
         }
     }

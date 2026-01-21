@@ -19,7 +19,10 @@ class PredictionRepository(
     private val settingsRepository: SettingsRepository,
     private val cacheService: PhraseCacheService
 ) {
-    private val localEngine = LocalPredictionEngine(wordFrequencyDao)
+    private val localEngine = LocalPredictionEngine(
+        wordFrequencyDao = wordFrequencyDao,
+        languageCode = settingsRepository.settings.value.languageCode
+    )
     private var aiEngine: AiPredictionEngine? = null
     private var hybridEngine: HybridPredictionEngine? = null
     

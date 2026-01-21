@@ -232,30 +232,7 @@ fun SentenceBar(
                         )
                     }
 
-                    // Undo AI Button
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = showUndo,
-                        enter = androidx.compose.animation.scaleIn() + androidx.compose.animation.fadeIn(),
-                        exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut()
-                    ) {
-                        IconButton(
-                            onClick = onUndo,
-                            modifier = Modifier
-                                .background(
-                                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Undo AI",
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onTertiaryContainer
-                            )
-                        }
-                    }
-                    
+
                     // Backspace Button with Long Press to Clear
                     val backspaceInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                     Box(
@@ -304,37 +281,15 @@ fun SentenceBar(
                 }
             }
             
-            // Predictions row (integrated within the same surface)
-            androidx.compose.animation.AnimatedVisibility(
-                visible = allowPredictionStrip && predictions.isNotEmpty(),
-                enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
-                exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
-                        .height(40.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                ) {
-                    androidx.compose.foundation.lazy.LazyRow(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 6.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        items(predictions) { word ->
-                            PredictionChip(
-                                word = word,
-                                symbolUrl = if (showPredictionSymbols) predictionSymbols[word] else null,
-                                onClick = { onPredictionClick(word) }
-                            )
-                        }
-                    }
-                }
-            }
+            
+            // Predictions (using PredictionStrip component)
+            PredictionStrip(
+                predictions = predictions,
+                predictionSymbols = predictionSymbols,
+                showSymbols = showPredictionSymbols,
+                isLoading = isPredictionLoading,
+                onPredictionClick = onPredictionClick
+            )
         }
     }
 }

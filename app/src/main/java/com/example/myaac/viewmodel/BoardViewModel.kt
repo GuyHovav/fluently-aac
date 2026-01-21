@@ -49,7 +49,8 @@ data class BoardUiState(
     val isPredictionLoading: Boolean = false,
     // Agent State
     val agentResponse: String? = null,
-    val isAgentProcessing: Boolean = false
+    val isAgentProcessing: Boolean = false,
+    val errorMessage: String? = null
 )
 
 class BoardViewModel(
@@ -315,12 +316,7 @@ class BoardViewModel(
                 async { createButtonWithSymbol(homeId, 3, getString(com.example.myaac.R.string.board_you_name), 0xFFE8EAF6, ButtonAction.Speak("you"), "you", localeStr) },
                 async { createButtonWithSymbol(homeId, 4, getString(com.example.myaac.R.string.board_family_name), 0xFFFFEBEE, ButtonAction.LinkToBoard(familyId), "family", localeStr) },
                 async { createButtonWithSymbol(homeId, 5, getString(com.example.myaac.R.string.board_friends_name), 0xFFE0F2F1, ButtonAction.LinkToBoard(friendsId), "friends", localeStr) },
-                async { createButtonWithSymbol(homeId, 6, getString(com.example.myaac.R.string.board_apps_name), 0xFFFFF9C4, ButtonAction.LinkToBoard(appsId), "apps", localeStr) },
-                
-                // Quick access buttons
-                async { createButtonWithSymbol(homeId, 8, getString(com.example.myaac.R.string.btn_yes), 0xFFC8E6C9, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_yes)), null, localeStr) },
-                async { createButtonWithSymbol(homeId, 9, getString(com.example.myaac.R.string.btn_no), 0xFFFFCDD2, ButtonAction.Speak(getString(com.example.myaac.R.string.btn_no)), null, localeStr) },
-                async { createButtonWithSymbol(homeId, 10, getString(com.example.myaac.R.string.btn_help), 0xFFB2DFDB, ButtonAction.Speak(getString(com.example.myaac.R.string.spoken_help)), "help", localeStr) }
+                async { createButtonWithSymbol(homeId, 6, getString(com.example.myaac.R.string.board_apps_name), 0xFFFFF9C4, ButtonAction.LinkToBoard(appsId), "apps", localeStr) }
             )
             val homeButtons = homeDeferred.awaitAll()
             
@@ -829,12 +825,10 @@ class BoardViewModel(
             return
         }
         
-        // Check settings
+        // Check settings - if disabled, skip entirely
         if (!settingsRepository.settings.value.autoGrammarCheck && !force) {
-            // Even if auto is off, we might want to background fetch?
-            // User request: "Grammar Check should work automatically behind the scene... but auto correction should be off"
-            // So we ALWAYS run the check, but we DON'T apply it automatically unless force is true (or auto is on? No, user said auto off always for now).
-            // So we proceed to run the check.
+            // Grammar check is disabled, skip to avoid blocking
+            return
         }
 
         grammarCheckJob = viewModelScope.launch {
@@ -994,7 +988,7 @@ class BoardViewModel(
         }
         applyCorrectionWhenReady = false // Cancel auto-apply if new input added
         triggerGrammarCheck()
-        updatePredictions() // Update word predictions
+        updatePredictions(instant = true) // Instant update for responsiveness
     }
 
     // ========== Word Prediction ==========
@@ -1023,7 +1017,7 @@ class BoardViewModel(
             try {
                 // Debounce only if not instant
                 if (!instant) {
-                    kotlinx.coroutines.delay(300)
+                    kotlinx.coroutines.delay(50) // Reduced from 300ms to 50ms for snappier feel
                 }
                 
                 _uiState.update { it.copy(isPredictionLoading = true) }
@@ -1075,13 +1069,6 @@ class BoardViewModel(
                     else -> predictionRepository.getPredictions(context, boardContext)
                 }
                 
-                // Fetch symbols for predictions
-                val symbolMap = if (settings.showSymbolsInPredictions && predictions.isNotEmpty()) {
-                    fetchSymbolsForPredictions(predictions)
-                } else {
-                    emptyMap()
-                }
-                
                 // Filter predictions: only show words NOT on the current board
                 val visibleWords = if (currentIsHomeBoard) {
                     _uiState.value.currentBoard?.buttons?.map { it.label } ?: emptyList()
@@ -1103,12 +1090,28 @@ class BoardViewModel(
                     }
                 }
                 
+                // First, update predictions WITHOUT symbols (instant)
                 _uiState.update {
                     it.copy(
                         predictions = smartPredictions,
-                        predictionSymbols = symbolMap,
+                        predictionSymbols = emptyMap(), // Clear old symbols
                         isPredictionLoading = false
                     )
+                }
+                
+                // Then, fetch symbols in background (non-blocking)
+                if (settings.showSymbolsInPredictions && smartPredictions.isNotEmpty()) {
+                    viewModelScope.launch {
+                        try {
+                            val symbolMap = fetchSymbolsForPredictions(smartPredictions)
+                            // Only update if predictions haven't changed
+                            if (_uiState.value.predictions == smartPredictions) {
+                                _uiState.update { it.copy(predictionSymbols = symbolMap) }
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("BoardViewModel", "Error fetching prediction symbols", e)
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("BoardViewModel", "Error updating predictions", e)
@@ -1284,25 +1287,40 @@ class BoardViewModel(
             }
             applyCorrectionWhenReady = false
             triggerGrammarCheck()
-            updatePredictions() // Update predictions after deletion
+            updatePredictions(instant = true) // Update predictions instantly
         }
     }
 
     fun updateButton(button: AacButton) {
-        val current = _uiState.value.currentBoard ?: return
+        android.util.Log.d("DEBUG_TEST", "updateButton called for: ${button.label} (id: ${button.id})")
+        val current = _uiState.value.currentBoard
+        if (current == null) {
+            android.util.Log.e("DEBUG_TEST", "Current board is null!")
+            return
+        }
+        
         val buttons = current.buttons.toMutableList()
         val index = buttons.indexOfFirst { it.id == button.id }
         
         if (index != -1) {
             buttons[index] = button
+            android.util.Log.d("DEBUG_TEST", "Updated existing button at index $index")
         } else {
             buttons.add(button)
+            android.util.Log.d("DEBUG_TEST", "Added new button. Total count: ${buttons.size}")
         }
         
         val updatedBoard = current.copy(buttons = buttons)
         viewModelScope.launch {
-            repository.saveBoard(updatedBoard)
-            _uiState.update { it.copy(currentBoard = updatedBoard) } 
+            try {
+                repository.saveBoard(updatedBoard)
+                android.util.Log.d("DEBUG_TEST", "Repository save completed. Updating UI state.")
+                _uiState.update { it.copy(currentBoard = updatedBoard, errorMessage = null) } 
+            } catch (e: Exception) {
+                e.printStackTrace()
+                android.util.Log.e("DEBUG_TEST", "Save failed: ${e.message}")
+                _uiState.update { it.copy(errorMessage = "Update failed: ${e.message}") }
+            }
         }
     }
 

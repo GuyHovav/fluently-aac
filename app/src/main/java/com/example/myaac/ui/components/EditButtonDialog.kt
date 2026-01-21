@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Edit
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -56,6 +57,86 @@ fun EditButtonDialog(
     onDelete: () -> Unit
 ) {
     var label by remember { mutableStateOf(button.label) }
+    // ...
+    // Using simple regex via tool to just replace the property definition and usage is hard due to many usages.
+    // I will rewrite the definition and the specific usages I logged.
+    
+    // Actually, I will just proceed with the manual replacement of the definition and the 2 call sites I touched.
+    // But there are OTHER call sites (Symbol search etc).
+    
+    // Better strategy: Keep `var label` but make it a computed property backed by the state? 
+    // No, local variables in functions don't work that way.
+    
+    // I must update ALL usages of `label`.
+    // There are many.
+    
+    // Alternative: Maybe the issue is simpler?
+    // What if I force `label` to be read inside `onClick` via a helper?
+    
+    // Let's TRY one small fix first:
+    // val currentLabel = label
+    // inside onClick? No, lambda capture happens at composition time.
+    
+    // The issue is that `EditButtonDialog` RECOMPOSES effectively, so `label` variable holds new value.
+    // AND `Button` updates its `onClick` lambda with the new `label` value in its closure.
+    
+    // Why did it fail?
+    
+    // Maybe `remember` is keyed incorrectly? No.
+    
+    // Let's try the `labelState` refactor. It is safer.
+    // usages:
+    // 58: var label by ...
+    // 170: label = name
+    // 322: value = label
+    // 323: onValueChange = { label = it ... }
+    // 448: label = label
+    // 456: ... label }
+    // 472: initialQuery = label
+    // 478: if (label.isBlank())
+    // 479: label = ...
+    // 492: ... '$label' ...
+    
+    // Okay, that's manageable. I will use `view_file` to be sure I get them all or use `multi_replace`.
+    
+    // Let's start by just changing the definition and the TextField/Save parts.
+    // I'll leave the others broken? No, compilation error.
+    
+    // I will use `replace_file_content` to change `var label by ...` to `val labelState = ...`
+    // And then a separate `multi_replace` to fix usages.
+    
+    // Wait, replacing `var label by ...` with `val labelState = ...` means `label` variable is gone.
+    // I can assume `label` property exists as `val label: String get() = labelState.value` ?
+    // Local property with getter? Not possible in Kotlin function.
+    
+    // `val label by labelState` if I rename the state? No.
+    
+    // I'll just change the underlying state usage.
+    
+    // Step 1: `var label by remember ...` -> `val labelState = remember ...`
+    // Step 2: `label` -> `labelState.value`
+    // Step 3: `label =` -> `labelState.value =`
+    
+    // This is tedious.
+    
+    // Alternative fix:
+    // Wrap `label` in `rememberUpdatedState` inside the `Button`?
+    // No, that's for passing to side effects.
+    
+    // What if I wrap the `onClick` lambda?
+    // Button(onClick = { val explicitLabel = label; onSave(...) })
+    
+    // That IS what it does implicitly.
+    
+    // Let's try to just FORCE a recomposition or read by adding a key to the Button?
+    /*
+    key(label) {
+       Button(...)
+    }
+    */
+    // This forces Button to be recreated when label changes.
+    // This is a minimal change.
+
     var speechText by remember { mutableStateOf(button.speechText ?: "") }
     var selectedColor by remember { mutableStateOf(button.backgroundColor) }
     var isHidden by remember { mutableStateOf(button.hidden) }
@@ -323,7 +404,7 @@ fun EditButtonDialog(
                     onValueChange = { label = it },
                     label = { Text("Label") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("edit_button_label"),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
                     keyboardActions = androidx.compose.foundation.text.KeyboardActions(
                         onDone = { keyboardController?.hide() }
@@ -435,17 +516,22 @@ fun EditButtonDialog(
                         Text("Delete")
                     }
 
-                    Row {
+                     // key(label) removed, using currentLabel captured below
+                     val currentLabel by rememberUpdatedState(label)
+                     
+                     Row {
                          TextButton(onClick = onDismiss) {
                              Text("Cancel")
                          }
                          Spacer(modifier = Modifier.width(8.dp))
-                         Button(onClick = {
+                         Button(
+                             modifier = Modifier.testTag("save_button"),
+                             onClick = {
                              // Persist image to internal storage if new one selected
                              // For prototype we just use the URI string, but in real app copy to app storage
                              onSave(
                                  button.copy(
-                                     label = label,
+                                     label = currentLabel,
                                      speechText = speechText.ifBlank { null },
                                      backgroundColor = selectedColor,
                                      iconPath = imageUri?.toString(),
@@ -453,7 +539,7 @@ fun EditButtonDialog(
                                      action = if (isLinkAction) {
                                          ButtonAction.LinkToBoard(selectedLinkBoardId)
                                      } else {
-                                         ButtonAction.Speak(speechText.ifBlank { label })
+                                         ButtonAction.Speak(speechText.ifBlank { currentLabel })
                                      },
                                      topic = null // Removed topic support
                                  )
@@ -461,7 +547,7 @@ fun EditButtonDialog(
                          }) {
                              Text("Save")
                          }
-                    }
+                     }
                 }
             }
         }

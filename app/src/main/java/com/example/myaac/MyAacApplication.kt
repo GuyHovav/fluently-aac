@@ -8,6 +8,8 @@ import com.example.myaac.data.repository.SettingsRepository
 import com.example.myaac.data.repository.PronunciationRepository
 import com.example.myaac.data.repository.AuthRepository
 import com.example.myaac.data.repository.CloudRepository
+import com.example.myaac.data.nlp.PredictionPreloader
+import com.example.myaac.data.nlp.LocalPredictionEngine
 
 class MyAacApplication : Application() {
     val database by lazy { AppDatabase.getDatabase(this) }
@@ -29,5 +31,23 @@ class MyAacApplication : Application() {
             android.util.Log.w("MyAacApplication", "Gemini API key not configured. AI features disabled.")
             null
         }
+    }
+    
+    // Prediction preloader for fast startup
+    private val predictionPreloader by lazy {
+        val localEngine = LocalPredictionEngine(
+            wordFrequencyDao = database.wordFrequencyDao(),
+            languageCode = settingsRepository.settings.value.languageCode
+        )
+        PredictionPreloader(database.wordFrequencyDao(), localEngine)
+    }
+    
+    override fun onCreate() {
+        super.onCreate()
+        
+        // Pre-load predictions in background for instant first use
+        predictionPreloader.preload()
+        
+        android.util.Log.d("MyAacApplication", "App initialized with fast prediction system")
     }
 }

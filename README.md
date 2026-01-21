@@ -55,6 +55,64 @@ An Augmentative and Alternative Communication (AAC) app for Android, powered by 
    - Wait for Gradle sync to complete
    - Click Run (or press Shift+F10)
 
+### Building with Docker 🐳
+
+Docker provides a consistent build environment without installing Android SDK locally.
+
+**Prerequisites:** Docker 20.10+ with BuildKit support
+
+**Quick Start:**
+```bash
+# Enable BuildKit (add to ~/.bashrc for persistence)
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+
+# Build debug APK (uses automated script)
+./docker-build.sh build-debug
+
+# Or with timing
+./docker-build.sh build-debug --time
+```
+
+APK location: `app/build/outputs/apk/debug/app-debug.apk`
+
+**Available Commands:**
+- `./docker-build.sh build-debug` - Build debug APK (fastest)
+- `./docker-build.sh build-release` - Build release APK
+- `./docker-build.sh test` - Run unit tests
+- `./docker-build.sh lint` - Run lint checks
+- `./docker-build.sh rebuild` - Rebuild Docker image (after dependency changes)
+- `./docker-build.sh shell` - Open interactive shell
+
+📖 **Detailed Guide:** See [docs/DOCKER.md](docs/DOCKER.md) for comprehensive documentation, troubleshooting, and advanced usage.
+
+**Note:** UI tests require an emulator/device and must be run on the host machine.
+
+### Deploying to Android Emulator 📱
+
+After building, deploy to an Android virtual device:
+
+**Prerequisites:** Android emulator running
+
+```bash
+# Quick deploy (build + install + launch)
+./deploy.sh --launch
+
+# Or step by step:
+emulator -list-avds                    # List emulators
+emulator -avd <name> &                 # Start emulator
+./deploy.sh --launch                   # Deploy and launch app
+```
+
+**Deployment Options:**
+- `./deploy.sh --launch` - Build (Docker), install, and launch
+- `./deploy.sh --local --launch` - Build (local Gradle), install, and launch
+- `./deploy.sh --device emulator-5554 --launch` - Deploy to specific device
+- `./deploy.sh --install-only --launch` - Skip build, just install
+
+📖 **For AI Agents:** See [.agent/workflows/deploy-to-device.md](.agent/workflows/deploy-to-device.md) for complete deployment workflow.
+
+
 ## Configuration
 
 ### Debug Mode

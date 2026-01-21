@@ -25,6 +25,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.gms.common.api.ApiException
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -226,7 +227,8 @@ fun SettingsScreen(
                     value = settings.textScale,
                     onValueChange = { repository.setTextScale(it) },
                     valueRange = 0.5f..2.0f,
-                    steps = 15
+                    steps = 15,
+                    modifier = Modifier.testTag("text_scale_slider")
                 )
             
                 // Display Scale
@@ -253,7 +255,8 @@ fun SettingsScreen(
                  Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = settings.showHorizontalNavigation,
-                        onCheckedChange = { repository.setHorizontalNavigationEnabled(it) }
+                        onCheckedChange = { repository.setHorizontalNavigationEnabled(it) },
+                        modifier = Modifier.testTag("horizontal_nav_checkbox")
                     )
                     Text("Show Horizontal Navigation")
                 }

@@ -2,6 +2,7 @@ package com.example.myaac.data.nlp
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
 /**
@@ -15,49 +16,30 @@ class HybridPredictionEngine(
 ) : PredictionEngine {
     
     override suspend fun predict(context: List<String>, count: Int, topic: String?): List<String> = coroutineScope {
-        val predictions = mutableSetOf<String>()
-        
-        // Always get local predictions (fast, offline)
+        // ALWAYS return local predictions immediately (fast path)
         val localPredictions = localEngine.predict(context, count, topic)
-        predictions.addAll(localPredictions)
         
-        // Get AI predictions if enabled and available
-        if (aiEnabled && aiEngine != null && context.isNotEmpty()) {
+        // If AI is disabled or unavailable, return local predictions immediately
+        if (!aiEnabled || aiEngine == null || context.isEmpty()) {
+            return@coroutineScope localPredictions
+        }
+        
+        // OPTIONAL: Launch AI predictions in background (fire-and-forget)
+        // This doesn't block - AI results could be used for cache warming
+        launch {
             try {
-                // Run AI predictions with timeout (don't block too long)
-                val aiPredictionsDeferred = async {
-                    withTimeout(2000L) { // 2 second timeout
-                        aiEngine.predict(context, count, topic)
-                    }
+                withTimeout(3000L) { // 3 second timeout, but doesn't block main flow
+                    val aiPredictions = aiEngine.predict(context, count, topic)
+                    // AI predictions could be logged or used to warm cache
+                    android.util.Log.d("HybridPrediction", "Background AI returned: $aiPredictions")
                 }
-                
-                val aiPredictions = try {
-                    aiPredictionsDeferred.await()
-                } catch (e: Exception) {
-                    android.util.Log.w("HybridPredictionEngine", "AI predictions timed out or failed", e)
-                    emptyList()
-                }
-                
-                // Merge AI predictions (prioritize AI for first few slots)
-                val merged = mutableListOf<String>()
-                
-                // Add AI predictions first (up to half the count)
-                val aiCount = minOf(aiPredictions.size, count / 2)
-                merged.addAll(aiPredictions.take(aiCount))
-                
-                // Fill remaining with local predictions
-                val remaining = localPredictions.filter { it !in merged }
-                merged.addAll(remaining.take(count - merged.size))
-                
-                return@coroutineScope merged.take(count)
             } catch (e: Exception) {
-                android.util.Log.e("HybridPredictionEngine", "Error in AI predictions", e)
-                // Fall back to local predictions only
+                android.util.Log.w("HybridPrediction", "Background AI predictions failed (non-blocking)", e)
             }
         }
         
-        // Return local predictions (AI disabled or failed)
-        predictions.take(count).toList()
+        // Return local predictions immediately - never wait for AI
+        localPredictions
     }
     
     override suspend fun recordUsage(word: String) {

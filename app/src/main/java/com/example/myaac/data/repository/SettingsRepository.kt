@@ -28,7 +28,7 @@ data class AppSettings(
     val appShortcutsJson: String = "",
     // Prediction settings
     val predictionEnabled: Boolean = true,
-    val aiPredictionEnabled: Boolean = true,
+    val aiPredictionEnabled: Boolean = false, // Disabled by default for speed
     val predictionCount: Int = 5,
     val showSymbolsInPredictions: Boolean = true,
     val learnFromUsage: Boolean = true,
@@ -79,7 +79,7 @@ class SettingsRepository(context: Context) {
             appShortcutsJson = preferences.getString(KEY_APP_SHORTCUTS, "") ?: "",
             // Prediction settings
             predictionEnabled = preferences.getBoolean(KEY_PREDICTION_ENABLED, true),
-            aiPredictionEnabled = preferences.getBoolean(KEY_AI_PREDICTION_ENABLED, true),
+            aiPredictionEnabled = preferences.getBoolean(KEY_AI_PREDICTION_ENABLED, false),
             predictionCount = preferences.getInt(KEY_PREDICTION_COUNT, 5).coerceIn(3, 8),
             showSymbolsInPredictions = preferences.getBoolean(KEY_SHOW_SYMBOLS_IN_PREDICTIONS, true),
             learnFromUsage = preferences.getBoolean(KEY_LEARN_FROM_USAGE, true),

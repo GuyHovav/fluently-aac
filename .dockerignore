@@ -1,10 +1,49 @@
+# Build outputs
 build/
+app/build/
 .gradle/
+*.apk
+*.aab
+
+# IDE files
 .idea/
-local.properties
-.git/
 *.iml
+.vscode/
+*.swp
+*.swo
+
+# Local config
+local.properties
+
+# Version control
+.git/
+.gitignore
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Android specific
 captures/
 .externalNativeBuild/
 .cxx/
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# Docker files (no need to copy these into the image)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation (optional - remove if you want docs in the image)
+README.md
+docs/
+
+# Test results
+app/build/reports/
+app/build/test-results/
+app/build/outputs/androidTest-results/
