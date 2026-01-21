@@ -95,3 +95,18 @@ lint/tmp/
 
 # Private Documentation
 private_docs/
+
+# Temporary Build & Debug Files
+*.txt
+*.png
+!app/src/main/res/**/*.png
+!docs/**/*.png
+*.log
+*.ps1
+*.sh
+!deploy.sh
+!docker-build.sh
+
+# OS specific
+.DS_Store
+Thumbs.db

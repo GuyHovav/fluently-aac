@@ -110,7 +110,12 @@ emulator -avd <name> &                 # Start emulator
 - `./deploy.sh --device emulator-5554 --launch` - Deploy to specific device
 - `./deploy.sh --install-only --launch` - Skip build, just install
 
-📖 **For AI Agents:** See [.agent/workflows/deploy-to-device.md](.agent/workflows/deploy-to-device.md) for complete deployment workflow.
+📖 **Detailed Documentation:**
+- [docs/DOCKER.md](docs/DOCKER.md) - Comprehensive Docker build guide
+- [docs/competitive_roadmap.md](docs/competitive_roadmap.md) - Product roadmap and feature comparison
+- [docs/plans/](docs/plans/) - Detailed implementation plans for features
+
+**For AI Agents:** See [.agent/workflows/deploy-to-device.md](.agent/workflows/deploy-to-device.md) for complete deployment workflow.
 
 
 ## Configuration
@@ -160,7 +165,7 @@ app/
 
 ## License
 
-[Add your license here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
