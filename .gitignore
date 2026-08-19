@@ -104,6 +104,7 @@ private_docs/
 *.txt
 *.png
 !app/src/main/res/**/*.png
+!android/app/src/main/res/**/*.png
 !docs/**/*.png
 *.log
 *.ps1
