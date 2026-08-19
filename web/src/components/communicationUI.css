@@ -1,0 +1,489 @@
+/* Styles for CommunicationGrid, SentenceBar, PredictionStrip, SelectionBar, and the App shell
+   that composes them. Plain CSS (no Tailwind/CSS-Modules dependency added) -- mobile-first,
+   full-bleed layout for a touch-driven AAC board. */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  width: 100%;
+  text-align: start;
+  background: #f5f5f7;
+  color: #1a1a1a;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.app-header__title {
+  flex: 1;
+  font-size: 1.1rem;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.app-header__nav-btn,
+.app-header__toggle {
+  border: 1px solid #ccc;
+  background: #f0f0f0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.app-header__nav-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.app-header__toggle--active {
+  background: #aa3bff;
+  border-color: #aa3bff;
+  color: #fff;
+}
+
+.app-debug-toggle {
+  margin: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #999;
+  background: #f0f0f0;
+  cursor: pointer;
+}
+
+.app-main {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+}
+
+.app-loading {
+  margin: auto;
+  color: #777;
+}
+
+/* ---------- CommunicationGrid ---------- */
+
+.communication-grid {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  overflow-y: auto;
+  width: 100%;
+  align-content: start;
+}
+
+.communication-grid-empty {
+  margin: auto;
+  padding: 24px;
+  color: #777;
+  text-align: center;
+}
+
+.aac-button-tile {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  aspect-ratio: 1 / 1.5;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.08s ease-out;
+}
+
+.aac-button-tile--selected {
+  outline: 3px solid #aa3bff;
+  outline-offset: -3px;
+}
+
+.aac-button-tile--hidden {
+  opacity: 0.5;
+}
+
+.aac-button-tile--dragging {
+  opacity: 0.5;
+}
+
+.aac-button-tile--add {
+  background: #f0f0f2;
+  border: 2px dashed #bbb;
+  align-items: center;
+  justify-content: center;
+}
+
+.aac-button-tile__add-icon {
+  font-size: 2.5rem;
+  font-weight: 300;
+  color: #999;
+}
+
+.aac-button-tile__symbol {
+  position: relative;
+  flex: 2.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+.aac-button-tile__symbol img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.aac-button-tile__initial {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.15);
+}
+
+.aac-button-tile__check {
+  position: absolute;
+  top: 6px;
+  inset-inline-end: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  color: #aa3bff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+.aac-button-tile__link {
+  position: absolute;
+  top: 6px;
+  inset-inline-end: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.aac-button-tile__label {
+  flex: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 4px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* ---------- SentenceBar ---------- */
+
+.sentence-bar {
+  flex-shrink: 0;
+  background: #fff;
+  border-top: 1px solid #e0e0e0;
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.sentence-bar__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  min-height: 56px;
+}
+
+.sentence-bar__content {
+  flex: 1;
+  min-width: 0;
+  background: #f0f0f2;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+}
+
+.sentence-bar__placeholder {
+  color: rgba(0, 0, 0, 0.4);
+  font-size: 1rem;
+}
+
+.sentence-bar__text {
+  font-size: 1.2rem;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.sentence-bar__chips {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.sentence-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #e3f2fd;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.sentence-chip img {
+  width: 20px;
+  height: 20px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.sentence-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.sentence-bar__icon-btn,
+.sentence-bar__speak-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sentence-bar__icon-btn {
+  background: #eceef1;
+}
+
+.sentence-bar__icon-btn:disabled {
+  opacity: 0.4;
+}
+
+.sentence-bar__speak-btn {
+  background: #aa3bff;
+  color: #fff;
+}
+
+.sentence-bar__speak-btn:disabled {
+  background: #ccc;
+}
+
+.sentence-bar__undo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: #ede7f6;
+  font-size: 0.8rem;
+  color: #3a1a5c;
+}
+
+.sentence-bar__undo-banner button {
+  border: none;
+  background: none;
+  color: #aa3bff;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+/* ---------- PredictionStrip ---------- */
+
+.prediction-strip {
+  padding: 0 8px 8px;
+}
+
+.prediction-strip__loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  color: #777;
+  font-size: 0.85rem;
+}
+
+.prediction-strip__spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+  border-top-color: #aa3bff;
+  animation: prediction-spin 0.7s linear infinite;
+}
+
+@keyframes prediction-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.prediction-strip__chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px;
+}
+
+.prediction-chip {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 16px;
+  background: #ede7f6;
+  color: #3a1a5c;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ---------- SelectionBar ---------- */
+
+.selection-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #ede7f6;
+  border-top: 1px solid #d8c8f0;
+  flex-shrink: 0;
+}
+
+.selection-bar__left,
+.selection-bar__right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.selection-bar__count {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.selection-bar__icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.selection-bar__icon-btn:disabled {
+  opacity: 0.4;
+}
+
+.selection-bar__icon-btn--danger {
+  color: #b3261e;
+}
+
+/* ---------- Shared modal ---------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 360px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  color: #1a1a1a;
+  text-align: start;
+}
+
+.modal h3 {
+  margin: 0 0 8px;
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.modal__danger {
+  color: #b3261e;
+}
+
+.modal__board-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+}
+
+.modal__board-item {
+  text-align: start;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #f0f0f2;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.modal__cancel {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: #fff;
+  cursor: pointer;
+}

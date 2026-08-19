@@ -1,0 +1,213 @@
+/* Styles for SettingsScreen and PronunciationManagementScreen -- both full-screen overlays
+   toggled from App.tsx, following the same lightweight view-toggle pattern as DebugHarness. */
+
+.settings-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  background: #f5f5f7;
+  color: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-screen__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.settings-screen__header h1 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.settings-screen__back-btn {
+  border: 1px solid #ccc;
+  background: #f0f0f0;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.settings-screen__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.settings-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e2e2e6;
+}
+
+.settings-section__title {
+  font-size: 1rem;
+  color: #aa3bff;
+  margin: 0 0 12px;
+}
+
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.settings-row__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.settings-row select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 0.9rem;
+  max-width: 260px;
+}
+
+.settings-row input[type='range'] {
+  width: 100%;
+}
+
+.settings-screen__radio-group {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.settings-screen__radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+
+.settings-toggle input {
+  margin-top: 2px;
+}
+
+.settings-toggle__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-toggle__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.settings-toggle__description {
+  font-size: 0.78rem;
+  color: #777;
+}
+
+.settings-screen__description {
+  font-size: 0.85rem;
+  color: #555;
+  margin: 0 0 8px;
+}
+
+.settings-screen__empty {
+  font-size: 0.85rem;
+  color: #999;
+  margin: 0 0 8px;
+}
+
+.settings-screen__list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 0.9rem;
+}
+
+.settings-screen__text-btn {
+  border: none;
+  background: none;
+  color: #aa3bff;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.settings-screen__link-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #aa3bff;
+  background: #fff;
+  color: #aa3bff;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* ---------- PronunciationManagementScreen ---------- */
+
+.pronunciation-screen__add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.pronunciation-screen__add-form input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+}
+
+.pronunciation-screen__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+
+.pronunciation-screen__item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pronunciation-screen__original {
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.pronunciation-screen__corrected {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #aa3bff;
+}

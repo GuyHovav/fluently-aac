@@ -1,0 +1,23 @@
+{
+  "name": "myaac-hybrid-shell",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Capacitor shell for the MyAAC hybrid migration (see web/ for the React app and android/ for the generated native wrapper).",
+  "scripts": {
+    "build:web": "npm --prefix web run build",
+    "cap:sync": "npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor-firebase/authentication": "^8.4.0",
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/camera": "^8.2.2",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/geolocation": "^8.2.2",
+    "@capacitor/haptics": "^8.0.2",
+    "firebase": "^12.17.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
+    "typescript": "^5.6.3"
+  }
+}

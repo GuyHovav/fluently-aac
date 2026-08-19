@@ -1,0 +1,502 @@
+/* Styles for EditButtonDialog, ImageEditorDialog, AppPickerDialog, SymbolSearchDialog.
+   Reuses .modal-backdrop/.modal/.modal__actions/.modal__cancel/.modal__danger from
+   communicationUI.css for the plain confirm/proposal dialogs; this file covers the larger,
+   bespoke dialog bodies. */
+
+/* ---------- EditButtonDialog ---------- */
+
+.modal--edit-button {
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edit-button__image-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-button__image-box {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.edit-button__image-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.edit-button__image-placeholder {
+  font-size: 2rem;
+  color: #999;
+}
+
+.edit-button__image-edit-btn {
+  position: absolute;
+  inset-inline-end: 4px;
+  bottom: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: #aa3bff;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+}
+
+.edit-button__image-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-button__image-actions button {
+  border: 1px solid #ccc;
+  background: #f5f5f7;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.edit-button__full-width-btn {
+  width: 100%;
+  border: 1px solid #ccc;
+  background: #f5f5f7;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.edit-button__analyzing {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.edit-button__error {
+  font-size: 0.8rem;
+  color: #b3261e;
+}
+
+.edit-button__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #444;
+}
+
+.edit-button__field input[type='text'] {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+}
+
+.edit-button__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-button__row--between {
+  justify-content: space-between;
+}
+
+.edit-button__color-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.edit-button__color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #999;
+  cursor: pointer;
+  padding: 0;
+}
+
+.edit-button__color-swatch--selected {
+  outline: 2px solid #aa3bff;
+  outline-offset: 2px;
+}
+
+.edit-button__section-label {
+  font-size: 0.85rem;
+  color: #444;
+  font-weight: 600;
+}
+
+.edit-button__action-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-button__action-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edit-button__radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.edit-button__select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 0.9rem;
+}
+
+.edit-button__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.edit-button__delete-btn {
+  border: none;
+  background: none;
+  color: #b3261e;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 8px;
+}
+
+.edit-button__footer-right {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-button__footer-right button {
+  border: 1px solid #ccc;
+  background: #f5f5f7;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.edit-button__save-btn {
+  background: #aa3bff !important;
+  border-color: #aa3bff !important;
+  color: #fff;
+}
+
+.edit-button__save-btn:disabled {
+  background: #ccc !important;
+  border-color: #ccc !important;
+  cursor: default;
+}
+
+.edit-button__proposed-symbol {
+  display: block;
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  margin: 12px auto;
+}
+
+/* ---------- AppPickerDialog ---------- */
+
+.modal--app-picker {
+  max-width: 380px;
+}
+
+.app-picker__list {
+  max-height: 360px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 8px 0;
+}
+
+.app-picker__status {
+  padding: 16px;
+  text-align: center;
+  color: #777;
+  font-size: 0.9rem;
+}
+
+.app-picker__status--error {
+  color: #b3261e;
+}
+
+.app-picker__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: start;
+}
+
+.app-picker__item:hover {
+  background: #f0f0f2;
+}
+
+.app-picker__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.app-picker__icon--placeholder {
+  background: #ddd;
+}
+
+.app-picker__labels {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-picker__name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-picker__package {
+  font-size: 0.75rem;
+  color: #888;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- SymbolSearchDialog ---------- */
+
+.modal--symbol-search {
+  max-width: 480px;
+  width: 100%;
+  height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.symbol-search__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.symbol-search__header h3 {
+  margin: 0;
+  font-size: 1rem;
+  flex: 1;
+}
+
+.symbol-search__lang-select {
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 0.8rem;
+}
+
+.symbol-search__bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.symbol-search__input {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+}
+
+.symbol-search__go-btn {
+  border: none;
+  background: #aa3bff;
+  color: #fff;
+  border-radius: 8px;
+  width: 40px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.symbol-search__results {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 12px;
+}
+
+.symbol-search__status {
+  text-align: center;
+  color: #777;
+  padding: 24px;
+  font-size: 0.9rem;
+}
+
+.symbol-search__status--error {
+  color: #b3261e;
+}
+
+.symbol-search__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.symbol-search__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.symbol-search__item:hover {
+  background: #f0f0f2;
+}
+
+.symbol-search__item img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+.symbol-search__item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 90px;
+}
+
+/* ---------- ImageEditorDialog ---------- */
+
+.image-editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+}
+
+.image-editor__error {
+  margin: auto;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.image-editor__stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  touch-action: none;
+}
+
+.image-editor__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.image-editor__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 32px;
+  flex-shrink: 0;
+}
+
+.image-editor__round-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-editor__round-btn--primary {
+  width: 56px;
+  height: 56px;
+  background: #aa3bff;
+}
+
+.image-editor__round-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.image-editor__zoom-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 24px;
+  padding: 8px 16px;
+}
+
+.image-editor__zoom-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.image-editor__zoom-label {
+  color: #fff;
+  font-size: 0.85rem;
+  min-width: 40px;
+  text-align: center;
+}

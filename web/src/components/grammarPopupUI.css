@@ -1,0 +1,44 @@
+/* Styles for GrammarPopup (the word-morphology-variations picker). */
+
+.grammar-popup {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 320px;
+  width: 100%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  color: #1a1a1a;
+  text-align: center;
+}
+
+.grammar-popup__title {
+  margin: 0 0 16px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.grammar-popup__empty {
+  color: #777;
+  margin: 0;
+}
+
+.grammar-popup__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.grammar-popup__chip {
+  border: none;
+  border-radius: 8px;
+  background: #ede7f6;
+  color: #3a1a5c;
+  padding: 12px 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.grammar-popup__chip:hover {
+  background: #dcd0f0;
+}

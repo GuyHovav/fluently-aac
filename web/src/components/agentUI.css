@@ -1,0 +1,42 @@
+/* Styles for AgentDialog ("Fluently" in-app AI assistant). Reuses .modal-backdrop/.modal/
+   .modal__actions from communicationUI.css and .prediction-strip__spinner for the loading spin. */
+
+.modal--agent {
+  max-width: 420px;
+}
+
+.agent-dialog__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #aa3bff;
+}
+
+.agent-dialog__response {
+  background: #ede7f6;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+
+.agent-dialog__loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #777;
+  font-size: 0.9rem;
+  padding: 8px 0;
+}
+
+.agent-dialog__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+}

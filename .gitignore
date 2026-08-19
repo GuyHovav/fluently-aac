@@ -1,3 +1,7 @@
+# Node / Capacitor shell (root package.json mirrors web/'s Capacitor plugin deps
+# so `npx cap sync android` can auto-discover them from the repo root)
+node_modules/
+
 # Gradle files
 .gradle/
 build/

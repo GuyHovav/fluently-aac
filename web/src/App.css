@@ -1,0 +1,133 @@
+* {
+  box-sizing: border-box;
+}
+
+.harness {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #1a1a1a;
+  background: #fafafa;
+  min-height: 100vh;
+}
+
+.harness-header h1 {
+  font-size: 1.25rem;
+  margin-bottom: 4px;
+}
+
+.harness-header p {
+  font-size: 0.85rem;
+  color: #555;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.test-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+
+.test-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.test-card-header h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.test-card-description {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 4px 0 10px;
+}
+
+.test-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.test-card-actions button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #999;
+  background: #f0f0f0;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.test-card-actions button:active {
+  background: #ddd;
+}
+
+.test-card-detail {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #f4f4f4;
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 10px;
+  font-size: 0.75rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.badge-idle {
+  background: #e0e0e0;
+  color: #555;
+}
+
+.badge-running {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-pass {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-fail {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.app-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.app-list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  justify-content: flex-start !important;
+}
+
+.photo-preview {
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: 6px;
+  margin-top: 8px;
+}
