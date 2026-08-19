@@ -1,0 +1,102 @@
+name: Android Build (Hybrid Shell)
+
+# Builds the Capacitor hybrid shell (web/ -> android/) into an installable debug APK.
+# The web build works with no secrets configured (Vite just embeds empty strings for
+# unset VITE_* vars), but AI/symbol-search/cloud-backup features need real API keys to
+# actually function on-device -- see web/.env.example for the full list. To make the
+# built APK fully functional, add the same keys as repository secrets (Settings ->
+# Secrets and variables -> Actions) using the exact names below.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "android/**"
+      - "capacitor.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/android-build.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "android/**"
+      - "capacitor.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/android-build.yml"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK platform + build-tools
+        run: sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: android
+
+      - name: Install root dependencies (Capacitor CLI)
+        run: npm ci
+
+      - name: Install web app dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Build web app
+        working-directory: web
+        env:
+          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+          VITE_GOOGLE_SEARCH_API_KEY: ${{ secrets.VITE_GOOGLE_SEARCH_API_KEY }}
+          VITE_GOOGLE_SEARCH_ENGINE_ID: ${{ secrets.VITE_GOOGLE_SEARCH_ENGINE_ID }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+        run: npm run build
+
+      - name: Sync web build into Android project
+        run: npm run cap:sync
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: myaac-hybrid-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
